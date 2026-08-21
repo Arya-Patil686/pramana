@@ -13,8 +13,13 @@ import { IconArrowDown, IconArrowRight } from "@/components/icons";
    Hero.
 
    Four layers move at four rates as the visitor scrolls: the far haze wash,
-   the globe, the readout strip, and the headline. That difference in rate is
+   the globe, the headline, and the readout strip. That difference in rate is
    the entire depth effect. Nothing is blurred and nothing floats on a shadow.
+
+   Every layer's travel is bounded so it stays inside the section's clip box.
+   The section hides its overflow so the globe can bleed past the right edge
+   without producing a horizontal scrollbar, which means a layer that drifts
+   past an edge is silently cut rather than merely offset.
 */
 
 const AirshedGlobe = dynamic(() => import("@/components/three/airshed-globe"), {
@@ -44,7 +49,14 @@ export function Hero() {
   const globeScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
   const copyY = useTransform(scrollYProgress, [0, 1], [0, 260]);
   const copyFade = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
-  const stripY = useTransform(scrollYProgress, [0, 1], [0, 90]);
+  /*
+     The readout strip is anchored to the bottom edge of a section that clips
+     its overflow, so it must never drift downward: at large viewports the
+     strip collapses to a single ~100px row, and a 90px downward translate put
+     almost the whole value row outside the clip boundary. Drifting upward is
+     structurally safe, since the travel moves it further inside the box.
+  */
+  const stripY = useTransform(scrollYProgress, [0, 1], [0, -24]);
 
   const episode = EPISODES[0];
   const upwindShare = episode.attribution
