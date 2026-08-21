@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, type RootState } from "@react-three/fiber";
 import * as THREE from "three";
 import { EPISODES } from "@/data/mock-episodes";
 
@@ -17,6 +17,20 @@ import { EPISODES } from "@/data/mock-episodes";
 
 const R = 1;
 const DEG = Math.PI / 180;
+
+/*
+   Perspective point-size attenuation.
+
+   A point of world-space diameter D sitting at view depth z covers
+   D * H / (2 * z * tan(fov/2)) device pixels. Marker sizes are therefore
+   declared in world units (the globe has radius 1) and converted here, so a
+   hotspot is the same visual size at any viewport size or pixel ratio.
+*/
+function projScale(state: RootState): number {
+  const cam = state.camera as THREE.PerspectiveCamera;
+  const dpr = Math.min(state.viewport.dpr ?? 1, 2);
+  return (state.size.height * dpr) / (2 * Math.tan((cam.fov * Math.PI) / 360));
+}
 
 function latLngToVec3(lat: number, lng: number, radius = R): THREE.Vector3 {
   const phi = lat * DEG;
@@ -53,12 +67,12 @@ const surfaceFrag = /* glsl */ `
     float sun = dot(normalize(vNormalW), normalize(uSun));
     // A wide terminator reads as atmosphere rather than a hard shadow line.
     float lit = smoothstep(-0.45, 0.55, sun);
-    vec3 base = mix(uNight, uDay, lit * 0.55);
+    vec3 base = mix(uNight, uDay, lit * 0.40);
 
     vec3 viewDir = normalize(-vViewPos);
     vec3 nView = normalize(vec3(viewMatrix * vec4(vNormalW, 0.0)));
     float fres = pow(1.0 - max(dot(nView, viewDir), 0.0), 3.0);
-    base += uRim * fres * 0.85;
+    base += uRim * fres * 0.45;
 
     gl_FragColor = vec4(base, 1.0);
   }
@@ -195,7 +209,7 @@ const fireVert = /* glsl */ `
   attribute float aSize;
   attribute float aSeed;
   uniform float uTime;
-  uniform float uDpr;
+  uniform float uProjScale;
   varying float vFacing;
   varying float vPulse;
 
@@ -206,7 +220,7 @@ const fireVert = /* glsl */ `
     vFacing = smoothstep(-0.02, 0.32, dot(nView, viewDir));
     vPulse = 0.74 + 0.26 * sin(uTime * 1.9 + aSeed * 6.2831853);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = aSize * uDpr * vPulse * (230.0 / -mv.z);
+    gl_PointSize = aSize * vPulse * uProjScale / -mv.z;
   }
 `;
 
@@ -223,14 +237,13 @@ const fireFrag = /* glsl */ `
     float core = smoothstep(0.15, 0.0, d);
     float halo = smoothstep(0.5, 0.05, d);
     vec3 col = mix(uHalo, uCore, core);
-    float a = (halo * 0.5 + core * 0.95) * vFacing * vPulse;
+    float a = (halo * 0.24 + core * 0.52) * vFacing * vPulse;
     gl_FragColor = vec4(col, a);
   }
 `;
 
 function FireField({ hotspots }: { hotspots: { lat: number; lng: number; frp: number }[] }) {
   const matRef = useRef<THREE.ShaderMaterial>(null);
-  const { viewport } = useThree();
 
   const geometry = useMemo(() => {
     const pos: number[] = [];
@@ -239,9 +252,9 @@ function FireField({ hotspots }: { hotspots: { lat: number; lng: number; frp: nu
     hotspots.forEach((h, i) => {
       const v = latLngToVec3(h.lat, h.lng, R * 1.006);
       pos.push(v.x, v.y, v.z);
-      // Fire Radiative Power drives marker area, clamped so one big fire
-      // does not swallow the corridor.
-      size.push(3.4 + Math.min(Math.sqrt(h.frp) * 0.9, 7.5));
+      // World-unit radius. Fire Radiative Power drives marker area, clamped
+      // so one big fire does not swallow the corridor.
+      size.push(0.009 + Math.min(Math.sqrt(h.frp) * 0.0015, 0.012));
       seed.push((i * 0.618) % 1);
     });
     const g = new THREE.BufferGeometry();
@@ -254,7 +267,7 @@ function FireField({ hotspots }: { hotspots: { lat: number; lng: number; frp: nu
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uDpr: { value: 1 },
+      uProjScale: { value: 1200 },
       uCore: { value: new THREE.Color("#ffd9a8") },
       uHalo: { value: new THREE.Color("#e8703a") },
     }),
@@ -264,7 +277,7 @@ function FireField({ hotspots }: { hotspots: { lat: number; lng: number; frp: nu
   useFrame((state) => {
     if (matRef.current) {
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-      matRef.current.uniforms.uDpr.value = Math.min(viewport.dpr ?? 1, 2);
+      matRef.current.uniforms.uProjScale.value = projScale(state);
     }
   });
 
@@ -290,7 +303,7 @@ const plumeVert = /* glsl */ `
   attribute float aSpeed;
   attribute vec3 aJitter;
   uniform float uTime;
-  uniform float uDpr;
+  uniform float uProjScale;
   uniform vec3 uP0;
   uniform vec3 uP1;
   uniform vec3 uP2;
@@ -316,7 +329,7 @@ const plumeVert = /* glsl */ `
 
     vAlpha = facing * smoothstep(0.0, 0.10, t) * smoothstep(1.0, 0.70, t);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = (1.5 + t * 3.8) * uDpr * (200.0 / -mv.z);
+    gl_PointSize = (0.0035 + t * 0.0095) * uProjScale / -mv.z;
   }
 `;
 
@@ -333,7 +346,7 @@ const plumeFrag = /* glsl */ `
     float soft = smoothstep(0.5, 0.0, d);
     // Smoke cools from ember to grey as it travels.
     vec3 col = mix(uHot, uCold, smoothstep(0.0, 0.45, vT));
-    gl_FragColor = vec4(col, soft * vAlpha * 0.42);
+    gl_FragColor = vec4(col, soft * vAlpha * 0.24);
   }
 `;
 
@@ -347,7 +360,6 @@ function PlumeStream({
   count?: number;
 }) {
   const matRef = useRef<THREE.ShaderMaterial>(null);
-  const { viewport } = useThree();
 
   const geometry = useMemo(() => {
     const pos = new Float32Array(count * 3);
@@ -382,7 +394,7 @@ function PlumeStream({
     const mid = source.clone().add(receptor).multiplyScalar(0.5).normalize();
     return {
       uTime: { value: 0 },
-      uDpr: { value: 1 },
+      uProjScale: { value: 1200 },
       uP0: { value: source.clone().normalize().multiplyScalar(R * 1.012) },
       uP1: { value: mid.multiplyScalar(R * 1.13) },
       uP2: { value: receptor.clone().normalize().multiplyScalar(R * 1.012) },
@@ -394,7 +406,7 @@ function PlumeStream({
   useFrame((state) => {
     if (matRef.current) {
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-      matRef.current.uniforms.uDpr.value = Math.min(viewport.dpr ?? 1, 2);
+      matRef.current.uniforms.uProjScale.value = projScale(state);
     }
   });
 
@@ -460,7 +472,7 @@ function CorridorArc({
 /* ── Receptor ping ────────────────────────────────────── */
 
 const pingVert = /* glsl */ `
-  uniform float uDpr;
+  uniform float uProjScale;
   uniform float uSize;
   varying float vFacing;
   void main() {
@@ -468,7 +480,7 @@ const pingVert = /* glsl */ `
     vec3 nView = normalize(normalMatrix * normalize(position));
     vFacing = smoothstep(-0.05, 0.3, dot(nView, normalize(-mv.xyz)));
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = uSize * uDpr * (230.0 / -mv.z);
+    gl_PointSize = uSize * uProjScale / -mv.z;
   }
 `;
 
@@ -495,7 +507,6 @@ const pingFrag = /* glsl */ `
 
 function ReceptorPing({ position }: { position: THREE.Vector3 }) {
   const matRef = useRef<THREE.ShaderMaterial>(null);
-  const { viewport } = useThree();
 
   const geometry = useMemo(() => {
     const p = position.clone().normalize().multiplyScalar(R * 1.008);
@@ -510,8 +521,8 @@ function ReceptorPing({ position }: { position: THREE.Vector3 }) {
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uDpr: { value: 1 },
-      uSize: { value: 26 },
+      uProjScale: { value: 1200 },
+      uSize: { value: 0.055 },
       uColor: { value: new THREE.Color("#2fbfb0") },
     }),
     []
@@ -520,7 +531,7 @@ function ReceptorPing({ position }: { position: THREE.Vector3 }) {
   useFrame((state) => {
     if (matRef.current) {
       matRef.current.uniforms.uTime.value = state.clock.elapsedTime;
-      matRef.current.uniforms.uDpr.value = Math.min(viewport.dpr ?? 1, 2);
+      matRef.current.uniforms.uProjScale.value = projScale(state);
     }
   });
 
@@ -602,8 +613,8 @@ function Scene({
         <PlumeStream source={sourceVec} receptor={receptorVec} />
         <ReceptorPing position={receptorVec} />
       </group>
-      <Atmosphere radius={1.035} color="#4a6a8f" intensity={0.55} power={3.2} />
-      <Atmosphere radius={1.14} color="#2f4a66" intensity={0.28} power={2.1} />
+      <Atmosphere radius={1.03} color="#4a6a8f" intensity={0.26} power={3.4} />
+      <Atmosphere radius={1.11} color="#2f4a66" intensity={0.13} power={2.3} />
     </group>
   );
 }
@@ -669,6 +680,51 @@ export default function AirshedGlobe({
   className,
 }: AirshedGlobeProps) {
   const [failed, setFailed] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
+
+  /*
+     Workaround, with the reason recorded so it can be removed later.
+
+     react-three-fiber sizes its drawing buffer from a ResizeObserver on the
+     canvas container. When the canvas mounts inside an overflow-hidden,
+     transformed ancestor (the parallax layer in the hero) that observer
+     reports zero on first paint, and because the container never changes size
+     afterwards no second callback ever arrives. The canvas is then stranded at
+     its 300x150 default and the hero renders blank until the window happens to
+     be resized.
+
+     Dispatching a resize makes r3f re-measure and fixes it, but a single
+     dispatch on mount lands before r3f has attached its own listener. So we
+     retry each frame and stop the moment r3f writes an inline width onto the
+     canvas, which is its signal that a real measurement landed. In practice
+     this settles within a frame or two; the cap keeps it from spinning if the
+     element genuinely has no size.
+  */
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const startedAt = Date.now();
+    const id = window.setInterval(() => {
+      const canvas = host.querySelector("canvas");
+
+      // r3f writes an inline width once a real measurement lands. Done.
+      if (canvas?.style.width) {
+        window.clearInterval(id);
+        return;
+      }
+      // Budget in wall-clock, not frames: in development the three.js chunk
+      // can take several seconds to compile, and the canvas does not exist
+      // until it has. A frame-counted loop expires before it ever appears.
+      if (Date.now() - startedAt > 20_000) {
+        window.clearInterval(id);
+        return;
+      }
+      if (canvas) window.dispatchEvent(new Event("resize"));
+    }, 200);
+
+    return () => window.clearInterval(id);
+  }, []);
 
   if (failed) {
     return (
@@ -679,9 +735,9 @@ export default function AirshedGlobe({
   }
 
   return (
-    <div className={className}>
+    <div ref={hostRef} className={className}>
       <Canvas
-        camera={{ position: [0, 0, 3.05], fov: 36 }}
+        camera={{ position: [0, 0, 3.4], fov: 34 }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}

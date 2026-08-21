@@ -38,16 +38,32 @@ function buildProjection(pts: { lat: number; lng: number }[]): Projection {
   const lngs = pts.map((p) => p.lng);
   const minLat = Math.min(...lats) - PAD_DEG;
   const maxLat = Math.max(...lats) + PAD_DEG;
-  const minLng = Math.min(...lngs) - PAD_DEG;
-  const maxLng = Math.max(...lngs) + PAD_DEG;
+  let minLng = Math.min(...lngs) - PAD_DEG;
+  let maxLng = Math.max(...lngs) + PAD_DEG;
 
   const meanLat = (minLat + maxLat) / 2;
-  const lngSpan = maxLng - minLng;
+  let lngSpan = maxLng - minLng;
   const latSpan = maxLat - minLat;
+  const cosLat = Math.cos(meanLat * DEG);
 
-  // Equirectangular with a cosine correction so shapes are not stretched.
-  const effectiveLngSpan = lngSpan * Math.cos(meanLat * DEG);
-  const height = Math.round((VIEW_W * latSpan) / effectiveLngSpan);
+  /*
+     Equirectangular with a cosine correction so shapes are not stretched.
+     A NW-to-SE corridor plus padding otherwise yields a portrait window,
+     which sits badly in a page column, so the longitude window is widened
+     symmetrically until the frame is at least MIN_ASPECT wide. This changes
+     how much surrounding territory is shown, never the position of anything
+     drawn on it: the scales stay linear and locked to each other.
+  */
+  const MIN_ASPECT = 1.5;
+  if ((lngSpan * cosLat) / latSpan < MIN_ASPECT) {
+    const needed = (MIN_ASPECT * latSpan) / cosLat;
+    const grow = (needed - lngSpan) / 2;
+    minLng -= grow;
+    maxLng += grow;
+    lngSpan = needed;
+  }
+
+  const height = Math.round((VIEW_W * latSpan) / (lngSpan * cosLat));
 
   return {
     width: VIEW_W,

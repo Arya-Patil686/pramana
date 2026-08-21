@@ -51,8 +51,8 @@
   --color-aqi-severe: #a82e1f;
   --color-aqi-severeplus: #7d1a10;
 
-  /* Type. Fraunces for editorial voice, Plex for instrumentation. */
-  --font-display: var(--font-fraunces), "Times New Roman", Georgia, serif;
+  /* Type. Newsreader for editorial voice, Plex for instrumentation. */
+  --font-display: var(--font-newsreader), "Times New Roman", Georgia, serif;
   --font-ui: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
 
@@ -63,10 +63,10 @@
   --text-base: 0.9375rem;
   --text-md: 1.0625rem;
   --text-lg: 1.375rem;
-  --text-xl: 1.875rem;
-  --text-2xl: 2.75rem;
-  --text-3xl: 4.25rem;
-  --text-4xl: 6rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.375rem;
+  --text-3xl: 3.125rem;
+  --text-4xl: 4.25rem;
 
   /* Corners stay square. Instruments do not have soft radii. */
   --radius-none: 0px;
