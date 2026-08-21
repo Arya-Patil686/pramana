@@ -68,7 +68,7 @@ export function Hero() {
       {/* Layer 2: the globe, held off-centre so the headline has room */}
       <motion.div
         style={still ? { y: globeY, scale: globeScale } : undefined}
-        className="absolute right-[-28%] top-[2%] h-[78vh] w-[125%] sm:right-[-14%] sm:w-[92%] lg:right-[-6%] lg:top-[-4%] lg:h-[104vh] lg:w-[62%]"
+        className="absolute right-[-20%] top-[6%] h-[54vh] w-[104%] sm:right-[-10%] sm:h-[62vh] sm:w-[78%] lg:right-[1%] lg:top-[7%] lg:h-[76vh] lg:w-[48%]"
       >
         {supported ? (
           <AirshedGlobe
@@ -90,7 +90,7 @@ export function Hero() {
       <div className="relative mx-auto flex min-h-[100svh] w-full max-w-[1500px] flex-col justify-center px-6 pb-40 pt-28 lg:px-10">
         <motion.div
           style={still ? { y: copyY, opacity: copyFade } : undefined}
-          className="max-w-2xl"
+          className="max-w-xl lg:max-w-2xl"
         >
           <div className="flex flex-wrap items-center gap-2.5">
             <StatusChip tone="hazard" pulse>
@@ -101,7 +101,7 @@ export function Hero() {
             </span>
           </div>
 
-          <h1 className="mt-7 font-display text-2xl font-medium leading-[1.02] text-text-primary sm:text-3xl">
+          <h1 className="mt-7 font-display text-xl font-medium leading-[1.05] text-text-primary sm:text-2xl lg:text-3xl">
             Every nation already knows
             <br />
             how bad its air is.

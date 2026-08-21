@@ -1,20 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/layout/nav-bar";
 import { Footer } from "@/components/layout/footer";
 
 /*
-   Fraunces carries the editorial voice: it has an optical-size axis and a
-   "wonk" axis, which gives headline text a drawn, un-generic quality.
+   Newsreader carries the editorial voice. Its optical-size axis means the
+   display cuts tighten as they scale up rather than just getting bigger, and
+   it reads as a document of record instead of a landing page.
    IBM Plex is the instrumentation face. It was commissioned for engineering
    documentation, so it sits correctly next to hashes and station readings.
 */
-const fraunces = Fraunces({
+const newsreader = Newsreader({
   subsets: ["latin"],
-  variable: "--font-fraunces",
+  variable: "--font-newsreader",
   display: "swap",
-  axes: ["SOFT", "WONK", "opsz"],
+  axes: ["opsz"],
   style: ["normal", "italic"],
 });
 
@@ -69,9 +70,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // Browser extensions (LanguageTool, Grammarly and friends) inject
+    // attributes onto <html> before React hydrates. Suppressing here stops a
+    // spurious mismatch warning; it does not mask mismatches in our own tree.
     <html
       lang="en"
-      className={`${fraunces.variable} ${plexSans.variable} ${plexMono.variable} antialiased`}
+      suppressHydrationWarning
+      className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} antialiased`}
     >
       <body className="grain min-h-screen bg-bg-base text-text-primary">
         <a
