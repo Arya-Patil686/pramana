@@ -1,26 +1,344 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+   PRAMANA · Atmospheric Ledger
+   Design language: night-operations instrument panel meets legal evidence file.
+   Rules: hairlines not shadows. Square corners. Depth via atmosphere, not blur.
+   No neon, no pastel, no purple. Colour carries meaning or it is not used.
+*/
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Surfaces. Deep blue-black, the colour of an unlit operations room. */
+  --color-bg-void: #06090d;
+  --color-bg-base: #0b1015;
+  --color-bg-surface: #10171f;
+  --color-bg-surface-2: #17202a;
+  --color-bg-inset: #080c11;
+
+  /* Borders are the primary structural device. */
+  --color-border-subtle: #1a222c;
+  --color-border-default: #26313e;
+  --color-border-strong: #3a4857;
+  --color-border-lit: #55677d;
+
+  /* Text */
+  --color-text-primary: #e9edf1;
+  --color-text-secondary: #96a2b0;
+  --color-text-tertiary: #5b6775;
+  --color-text-quaternary: #3d4854;
+
+  /* Functional accents. Each maps to one system concept. */
+  --color-accent-verify: #e3a84e;
+  --color-accent-verify-dim: #6e5227;
+  --color-accent-hazard: #dd5e3c;
+  --color-accent-hazard-dim: #5e2a1b;
+  --color-accent-clear: #2fbfb0;
+  --color-accent-clear-dim: #16544d;
+  --color-accent-signal: #5c8ae6;
+  --color-accent-signal-dim: #253c63;
+
+  /* Atmosphere. Used by plume, haze and particle rendering. */
+  --color-haze-near: #8e9aab;
+  --color-haze-far: #4a5563;
+  --color-plume: #b8815b;
+  --color-ember: #e8703a;
+
+  /* AQI hazard ramp. Mirrors lib/utils.ts exactly. */
+  --color-aqi-good: #2fbfb0;
+  --color-aqi-moderate: #e3a84e;
+  --color-aqi-poor: #e0603f;
+  --color-aqi-verypoor: #c94430;
+  --color-aqi-severe: #a82e1f;
+  --color-aqi-severeplus: #7d1a10;
+
+  /* Type. Fraunces for editorial voice, Plex for instrumentation. */
+  --font-display: var(--font-fraunces), "Times New Roman", Georgia, serif;
+  --font-ui: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Scale. Small instrument text, large editorial display. */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.875rem;
+  --text-2xl: 2.75rem;
+  --text-3xl: 4.25rem;
+  --text-4xl: 6rem;
+
+  /* Corners stay square. Instruments do not have soft radii. */
+  --radius-none: 0px;
+  --radius-hair: 1px;
+  --radius-sm: 2px;
+
+  /* Motion */
+  --ease-panel: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-instrument: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-panel: 240ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #0b1015;
+  --foreground: #e9edf1;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  overflow-x: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar reads as a machined track. */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track {
+  background: var(--color-bg-void);
+  border-left: 1px solid var(--color-border-subtle);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border: 2px solid var(--color-bg-void);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-border-default) var(--color-bg-void); }
+
+::selection {
+  background: rgba(227, 168, 78, 0.22);
+  color: var(--color-text-primary);
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--color-accent-verify);
+  outline-offset: 2px;
+}
+
+/* ── Typography roles ─────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.022em;
+  line-height: 1.06;
+}
+
+.font-ui {
+  font-family: var(--font-ui);
+  letter-spacing: -0.005em;
+}
+
+/* Instrument readouts: monospace, wide-tracked, uppercase. */
+.font-technical {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+  letter-spacing: 0.02em;
+}
+
+.label-technical {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  font-weight: 500;
+}
+
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 1;
+}
+
+/* ── Structural surfaces ──────────────────────────────── */
+
+.panel {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.panel-inset {
+  background: var(--color-bg-inset);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* Corner ticks: the detail that makes a box read as an instrument bezel. */
+.bezel {
+  position: relative;
+}
+.bezel::before,
+.bezel::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-color: var(--color-border-strong);
+  border-style: solid;
+  pointer-events: none;
+}
+.bezel::before {
+  top: -1px; left: -1px;
+  border-width: 1px 0 0 1px;
+}
+.bezel::after {
+  bottom: -1px; right: -1px;
+  border-width: 0 1px 1px 0;
+}
+
+.hairline {
+  height: 1px;
+  background: var(--color-border-subtle);
+  border: 0;
+}
+
+/* Graticule. Only inside map and chart figures, never as page furniture. */
+.graticule {
+  background-image:
+    linear-gradient(to right, rgba(38, 49, 62, 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(38, 49, 62, 0.55) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+.graticule-fine {
+  background-image:
+    linear-gradient(to right, rgba(38, 49, 62, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(38, 49, 62, 0.3) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* ── Atmosphere ───────────────────────────────────────── */
+
+/* Film grain. Real texture, applied at very low opacity over the whole page. */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Horizon haze: a low, desaturated atmospheric wash. Not a brand gradient. */
+.haze-top {
+  background: linear-gradient(
+    to bottom,
+    rgba(74, 85, 99, 0.16) 0%,
+    rgba(74, 85, 99, 0.05) 38%,
+    transparent 72%
+  );
+}
+
+.haze-bottom {
+  background: linear-gradient(
+    to top,
+    rgba(11, 16, 21, 0.96) 0%,
+    rgba(11, 16, 21, 0.6) 42%,
+    transparent 100%
+  );
+}
+
+.vignette {
+  background: radial-gradient(
+    120% 90% at 50% 42%,
+    transparent 30%,
+    rgba(6, 9, 13, 0.55) 100%
+  );
+}
+
+/* ── State treatments ─────────────────────────────────── */
+
+.sealed {
+  border-color: var(--color-accent-verify);
+  box-shadow: inset 0 0 0 1px rgba(227, 168, 78, 0.14);
+}
+
+.hash-block {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-inset);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 2px solid var(--color-border-default);
+  padding: 0.5rem 0.7rem;
+  word-break: break-all;
+  line-height: 1.75;
+}
+
+/* ── Motion primitives ────────────────────────────────── */
+
+@keyframes hazard-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.hazard-pulse { animation: hazard-pulse 2.4s var(--ease-instrument) infinite; }
+
+@keyframes scan-down {
+  0% { transform: translateY(-100%); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(1200%); opacity: 0; }
+}
+.scan-line { animation: scan-down 1.6s var(--ease-instrument) forwards; }
+
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-rise { animation: fade-rise 0.5s var(--ease-panel) forwards; }
+
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Loading states. Absence of these is itself a tell. */
+@keyframes ingest-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(320%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-surface-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 32%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(150, 162, 176, 0.09),
+    transparent
+  );
+  animation: ingest-sweep 1.5s var(--ease-instrument) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
