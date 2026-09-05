@@ -95,7 +95,9 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  scroll-behavior: smooth;
+  /* Scroll smoothing is owned by Lenis (components/scroll/smooth-scroll).
+     Leaving CSS smoothing on as well makes the two fight over the same
+     scroll position, which reads as a stutter on every anchor jump. */
 }
 
 body {

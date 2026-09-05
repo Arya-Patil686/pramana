@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Hero } from "@/components/sections/hero";
-import { CorridorReplay } from "@/components/figures/corridor-replay";
 import { ContributionRegister } from "@/components/figures/contribution-register";
 import { SealVerifier } from "@/components/figures/seal-verifier";
 import { ParallaxLayer, Reveal, ScrollRail } from "@/components/scroll/parallax";
-import { SectionHeader, Shell, Readout } from "@/components/ui/primitives";
+import { SectionHeader, Shell } from "@/components/ui/primitives";
 import {
   IconArrowRight,
   IconConsole,
@@ -15,6 +14,8 @@ import {
 import { EPISODES } from "@/data/mock-episodes";
 import { CERTIFICATES } from "@/data/mock-certificates";
 import { CapabilityMatrix } from "@/components/figures/capability-matrix";
+import { CorridorSequence } from "@/components/sections/corridor-sequence";
+import { fetchFireDetections } from "@/lib/sources/firms";
 
 const episode = EPISODES[0];
 const certificate = CERTIFICATES[0];
@@ -46,7 +47,12 @@ const NEXT_SURFACES = [
   },
 ];
 
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  /* Real detections when a FIRMS key is present, the recorded 2 November
+     episode otherwise. Either way the sequence is drawn from acquisition
+     records rather than from placed markers. */
+  const fires = await fetchFireDetections();
+
   return (
     <>
       <ScrollRail label="Airshed overview" />
@@ -86,73 +92,13 @@ export default function OverviewPage() {
       </section>
 
       {/* ── 02 · Detection and transport ─────────────── */}
-      <section className="relative overflow-hidden border-b border-border-subtle py-24 lg:py-32">
-        <div
-          className="haze-top pointer-events-none absolute inset-x-0 top-0 h-72"
-          aria-hidden="true"
-        />
-        <Shell wide>
-          <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
-            <div className="lg:col-span-4">
-              <ParallaxLayer speed={34}>
-                <SectionHeader
-                  index="02"
-                  kicker="Detection and transport"
-                  title="Fires ignite here. The city pays for it 40 hours later."
-                  lede={
-                    <>
-                      Scrub the timeline. Hotspots appear at their true FIRMS
-                      acquisition time, the plume advects along the 925 hPa wind
-                      field, and the receptor loads on the delay the corridor
-                      actually imposes.
-                    </>
-                  }
-                />
-
-                <div className="mt-8 grid grid-cols-2 gap-px bg-border-subtle">
-                  <Readout
-                    label="Hotspots"
-                    value={episode.fireHotspots.length}
-                    hint="VIIRS and MODIS, 375 m"
-                    tone="hazard"
-                  />
-                  <Readout
-                    label="Transport"
-                    value="40"
-                    unit="h"
-                    hint="Source centroid to receptor"
-                    tone="signal"
-                  />
-                  <Readout
-                    label="Stations"
-                    value={episode.stationReadings.length}
-                    hint="CPCB reference monitors"
-                  />
-                  <Readout
-                    label="Lead time"
-                    value={episode.leadTimeHours}
-                    unit="h"
-                    hint="Before stage crossing"
-                    tone="clear"
-                  />
-                </div>
-
-                <p className="mt-6 text-2xs leading-relaxed text-text-quaternary">
-                  Wind barbs point downwind. Marker area scales with Fire
-                  Radiative Power. The soft field behind the hotspots is the
-                  FRP-weighted residence-time proxy, not a painted glow.
-                </p>
-              </ParallaxLayer>
-            </div>
-
-            <div className="lg:col-span-8">
-              <ParallaxLayer speed={-22}>
-                <CorridorReplay episode={episode} />
-              </ParallaxLayer>
-            </div>
-          </div>
-        </Shell>
-      </section>
+      {/*
+         The static figure that used to sit here is now the pinned corridor
+         flight: one scroll-scrubbed shot from ignition to the register. The
+         figure itself still lives on the console, where an operator needs to
+         scrub a timeline rather than watch a sequence.
+      */}
+      <CorridorSequence detections={fires.detections} />
 
       {/* ── 03 · Attribution ─────────────────────────── */}
       <section className="border-b border-border-subtle py-24 lg:py-32">
