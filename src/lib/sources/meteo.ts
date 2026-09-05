@@ -64,6 +64,16 @@ function bearingFromDirection(directionFrom: number): number {
   return (directionFrom + 180) % 360;
 }
 
+/** The recorded episode field, as a WindField the engine can consume. */
+export function episodeWindField(): WindField {
+  return {
+    samples: EPISODE_FIELD,
+    live: false,
+    source: "Recorded episode field · 2024-11-03 18:00 IST, 925 hPa",
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
 export async function fetchWindField(
   corridor = "punjab-delhi"
 ): Promise<WindField> {
@@ -120,7 +130,7 @@ export async function fetchWindField(
     };
   } catch (error) {
     return {
-      samples: FALLBACK_FIELD,
+      samples: EPISODE_FIELD,
       live: false,
       source: "Recorded field · 2024-11-03 18:00 IST, 925 hPa",
       fetchedAt,
@@ -134,9 +144,16 @@ export async function fetchWindField(
   }
 }
 
-/* The 3 November 2024 episode field, kept so the corridor still animates
-   correctly with no network at all. */
-const FALLBACK_FIELD: WindSample[] = [
+/*
+   The 3 November 2024 episode field.
+
+   Kept for two jobs. It stands in when Open-Meteo is unreachable, and it is
+   what `episode` mode replays: outside the burning season the live field
+   genuinely does not carry Punjab smoke to Delhi, and the engine correctly
+   reports that nothing arrives. Being able to run the same model over a known
+   episode is what makes that null result legible rather than alarming.
+*/
+export const EPISODE_FIELD: WindSample[] = [
   { lat: 30.63, lng: 75.85, speed: 4.1, directionFrom: 308, bearingTo: 128, temperatureC: 19.2, boundaryLayerM: 240, validAt: "2024-11-03T18:00", pressureLevel: 925 },
   { lat: 30.21, lng: 75.69, speed: 3.8, directionFrom: 312, bearingTo: 132, temperatureC: 19.6, boundaryLayerM: 225, validAt: "2024-11-03T18:00", pressureLevel: 925 },
   { lat: 30.34, lng: 76.38, speed: 4.4, directionFrom: 305, bearingTo: 125, temperatureC: 19.1, boundaryLayerM: 260, validAt: "2024-11-03T18:00", pressureLevel: 925 },

@@ -78,6 +78,20 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): nu
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+/**
+ * Synchronous placement, for the attribution engine.
+ *
+ * The engine places thousands of grid cells per run, so it cannot await a
+ * geocoding round trip per cell — and it does not need to. Cells are 0.1°,
+ * corridor tehsils are tens of kilometres apart, and the centroid table
+ * resolves that scale exactly. Reverse geocoding stays where precision
+ * actually matters, which is placing one citizen's report.
+ */
+export function placeByCentroid(lat: number, lng: number) {
+  const p = nearestCentroid(lat, lng);
+  return { tehsil: p.tehsil, district: p.district, state: p.state };
+}
+
 function nearestCentroid(lat: number, lng: number): Place {
   let best = CENTROIDS[0];
   let bestKm = Infinity;
