@@ -3,6 +3,7 @@ import { Newsreader, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/layout/nav-bar";
 import { Footer } from "@/components/layout/footer";
+import { SmoothScroll } from "@/components/scroll/smooth-scroll";
 
 /*
    Newsreader carries the editorial voice. Its optical-size axis means the
@@ -85,6 +86,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
+        <SmoothScroll />
         <NavBar />
         <main id="main" className="pt-11">
           {children}
