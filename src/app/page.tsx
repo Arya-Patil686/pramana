@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Story, type LiveConditions } from "@/components/sections/story";
 import { Frond, Shrub, Station, Cloud } from "@/components/illustration/parts";
-import { fetchWindField } from "@/lib/sources/meteo";
+import { fetchWindField, episodeWindField } from "@/lib/sources/meteo";
 import { fetchFireDetections } from "@/lib/sources/firms";
+import { computeAttribution } from "@/lib/attribution/engine";
+import { placeByCentroid } from "@/lib/sources/geocode";
 
 /*
    The airshed overview.
@@ -60,6 +62,19 @@ const SURFACES = [
 export default async function OverviewPage() {
   const [wind, fires] = await Promise.all([fetchWindField(), fetchFireDetections()]);
 
+  /*
+     Scene four quotes a transport time and a leading source. Both are the
+     model's own output over the recorded episode, not numbers typed into the
+     copy — if the engine changes, the story changes with it.
+  */
+  const replay = computeAttribution(
+    fires.detections,
+    episodeWindField(),
+    { name: "Delhi", lat: 28.6469, lng: 77.3162 },
+    placeByCentroid,
+    "Delhi"
+  );
+
   /* The corridor's mid-point sample is the one the story quotes: it is the
      transport leg, rather than conditions sitting over either endpoint. */
   const mid = wind.samples[Math.floor(wind.samples.length / 2)];
@@ -70,6 +85,9 @@ export default async function OverviewPage() {
     windLive: wind.live,
     fireCount: fires.detections.length,
     firesLive: fires.live,
+    transportHours: replay.peakTransportHours,
+    topSource: replay.byTehsil[0]?.tehsil ?? null,
+    topSharePct: replay.byTehsil[0]?.contributionPct ?? 0,
   };
 
   return (
