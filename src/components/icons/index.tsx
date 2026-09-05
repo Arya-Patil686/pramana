@@ -266,3 +266,38 @@ export const NAV_ICONS = {
   federation: IconFederation,
   advisory: IconAdvisory,
 } as const;
+
+/* A citizen's camera. The aperture is a plain circle, not a lens flare. */
+export function IconReport(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M2.5 7.5h4l1.6-2.4h7.8L17.5 7.5h4v13h-19z" vectorEffect="non-scaling-stroke" />
+      <circle cx="12" cy="13.6" r="4.1" vectorEffect="non-scaling-stroke" />
+    </Glyph>
+  );
+}
+
+/* Google AI integration: an external service wired into the pipeline. */
+export function IconIntegration(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <rect x="7.5" y="7.5" width="9" height="9" vectorEffect="non-scaling-stroke" />
+      <path
+        d="M10 7.5V3.5M14 7.5V3.5M10 20.5v-4M14 20.5v-4M7.5 10H3.5M7.5 14H3.5M20.5 10h-4M20.5 14h-4"
+        vectorEffect="non-scaling-stroke"
+      />
+    </Glyph>
+  );
+}
+
+/* A spoken advisory. Waveform bars, not a cartoon speaker. */
+export function IconVoice(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path
+        d="M3 10.5v3M7 7v10M11 3.5v17M15 6.5v11M19 9.5v5"
+        vectorEffect="non-scaling-stroke"
+      />
+    </Glyph>
+  );
+}
