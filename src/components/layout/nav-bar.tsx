@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { IntegrationChip } from "@/components/layout/integration-chip";
 import {
   IconAirshed,
   IconConsole,
@@ -11,6 +12,8 @@ import {
   IconCounterfactual,
   IconValidation,
   IconFederation,
+  IconReport,
+  IconVoice,
   type IconProps,
 } from "@/components/icons";
 
@@ -23,11 +26,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Airshed", index: "00", icon: IconAirshed },
-  { href: "/console", label: "Console", index: "01", icon: IconConsole },
-  { href: "/certificate", label: "Certificate", index: "02", icon: IconCertificate },
-  { href: "/counterfactual", label: "Counterfactual", index: "03", icon: IconCounterfactual },
-  { href: "/validation", label: "Validation", index: "04", icon: IconValidation },
-  { href: "/federation", label: "Federation", index: "05", icon: IconFederation },
+  { href: "/report", label: "Report", index: "01", icon: IconReport },
+  { href: "/console", label: "Console", index: "02", icon: IconConsole },
+  { href: "/advisory", label: "Advisory", index: "03", icon: IconVoice },
+  { href: "/certificate", label: "Certificate", index: "04", icon: IconCertificate },
+  { href: "/counterfactual", label: "Counterfactual", index: "05", icon: IconCounterfactual },
+  { href: "/validation", label: "Validation", index: "06", icon: IconValidation },
+  { href: "/federation", label: "Federation", index: "07", icon: IconFederation },
 ];
 
 /* UTC clock. Rendered only after mount so server and client markup agree. */
@@ -131,7 +136,8 @@ export function NavBar() {
 
       {/* Node status strip */}
       <div className="ml-auto flex shrink-0 items-center gap-4 pl-4">
-        <span className="label-technical hidden lg:inline">
+        <IntegrationChip />
+        <span className="label-technical hidden xl:inline">
           Node IN-01
         </span>
         <NodeClock />

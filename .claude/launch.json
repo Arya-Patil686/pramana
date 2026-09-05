@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "pramana-dev",
+      "name": "pramana",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["--prefix", "/Users/arya/Documents/College/projects/Pramana", "run", "dev"],
       "port": 3000
     }
   ]
