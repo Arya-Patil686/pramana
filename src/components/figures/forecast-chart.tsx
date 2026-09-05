@@ -20,10 +20,10 @@ const H = 380;
 const PAD = { top: 18, right: 20, bottom: 34, left: 46 };
 
 const SERIES = [
-  { key: "pramana", label: "PRAMĀNA", colour: "#e3a84e", width: 2, dash: "" },
-  { key: "googleAQ", label: "Google AQ API", colour: "#5c8ae6", width: 1.4, dash: "" },
+  { key: "pramana", label: "PRAMĀNA", colour: "var(--color-accent-verify)", width: 2, dash: "" },
+  { key: "googleAQ", label: "Google AQ API", colour: "var(--color-accent-signal)", width: 1.4, dash: "" },
   { key: "persistence", label: "Persistence", colour: "#8e9aab", width: 1.2, dash: "5 4" },
-  { key: "climatology", label: "Climatology", colour: "#5b6775", width: 1.2, dash: "2 4" },
+  { key: "climatology", label: "Climatology", colour: "var(--color-text-tertiary)", width: 1.2, dash: "2 4" },
 ] as const;
 
 type SeriesKey = (typeof SERIES)[number]["key"];
@@ -161,13 +161,13 @@ export function ForecastChart({
           })}
 
           {/* Axes */}
-          <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={H - PAD.bottom} stroke="#26313e" />
+          <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={H - PAD.bottom} stroke="var(--color-border-default)" />
           <line
             x1={PAD.left}
             x2={W - PAD.right}
             y1={H - PAD.bottom}
             y2={H - PAD.bottom}
-            stroke="#26313e"
+            stroke="var(--color-border-default)"
           />
 
           {/* Y ticks */}
@@ -178,13 +178,13 @@ export function ForecastChart({
                 x2={PAD.left}
                 y1={y(v)}
                 y2={y(v)}
-                stroke="#3d4854"
+                stroke="var(--color-text-quaternary)"
               />
               <text
                 x={PAD.left - 8}
                 y={y(v) + 4}
                 textAnchor="end"
-                fill="#5b6775"
+                fill="var(--color-text-tertiary)"
                 fontSize="11"
                 fontFamily="var(--font-mono)"
               >
@@ -201,13 +201,13 @@ export function ForecastChart({
                 x2={x(h)}
                 y1={H - PAD.bottom}
                 y2={H - PAD.bottom + 4}
-                stroke="#3d4854"
+                stroke="var(--color-text-quaternary)"
               />
               <text
                 x={x(h)}
                 y={H - PAD.bottom + 18}
                 textAnchor="middle"
-                fill="#5b6775"
+                fill="var(--color-text-tertiary)"
                 fontSize="11"
                 fontFamily="var(--font-mono)"
               >
@@ -229,7 +229,7 @@ export function ForecastChart({
           <text
             x={x(0) + 5}
             y={PAD.top + 11}
-            fill="#96a2b0"
+            fill="var(--color-text-secondary)"
             fontSize="11"
             fontFamily="var(--font-mono)"
           >
@@ -261,7 +261,7 @@ export function ForecastChart({
                   cx={x(h)}
                   cy={y(threshold.aqiMin)}
                   r="3.5"
-                  fill="#080c11"
+                  fill="var(--color-bg-inset)"
                   stroke={s.colour}
                   strokeWidth="1.6"
                 />
@@ -277,7 +277,7 @@ export function ForecastChart({
                 x2={x(hovered.hour)}
                 y1={PAD.top}
                 y2={H - PAD.bottom}
-                stroke="#96a2b0"
+                stroke="var(--color-text-secondary)"
                 strokeWidth="0.9"
               />
               {SERIES.filter((s) => !hidden.has(s.key)).map((s) => (

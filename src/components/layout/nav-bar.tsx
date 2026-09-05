@@ -2,150 +2,157 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { IntegrationChip } from "@/components/layout/integration-chip";
-import {
-  IconAirshed,
-  IconConsole,
-  IconCertificate,
-  IconCounterfactual,
-  IconValidation,
-  IconFederation,
-  IconReport,
-  IconVoice,
-  type IconProps,
-} from "@/components/icons";
+
+/*
+   The masthead.
+
+   A printed bar rather than a floating glass one: solid paper, a hard rule
+   underneath, and a drawn seal beside the wordmark. It stays opaque at every
+   scroll position because it sits over six scenes of saturated flat colour,
+   and a translucent bar over those reads as a smear.
+
+   The route list is long for a bar this plain, so it is split: the four
+   surfaces a visitor actually moves between are always visible, and the
+   analysis surfaces collapse behind a disclosure that is a link list, not a
+   menu that needs managing.
+*/
 
 interface NavItem {
   href: string;
   label: string;
-  index: string;
-  icon: (p: IconProps) => React.ReactElement;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Airshed", index: "00", icon: IconAirshed },
-  { href: "/report", label: "Report", index: "01", icon: IconReport },
-  { href: "/console", label: "Console", index: "02", icon: IconConsole },
-  { href: "/advisory", label: "Advisory", index: "03", icon: IconVoice },
-  { href: "/certificate", label: "Certificate", index: "04", icon: IconCertificate },
-  { href: "/counterfactual", label: "Counterfactual", index: "05", icon: IconCounterfactual },
-  { href: "/validation", label: "Validation", index: "06", icon: IconValidation },
-  { href: "/federation", label: "Federation", index: "07", icon: IconFederation },
+const PRIMARY: NavItem[] = [
+  { href: "/report", label: "Report" },
+  { href: "/console", label: "Console" },
+  { href: "/advisory", label: "Advisory" },
+  { href: "/certificate", label: "Certificate" },
 ];
 
-/* UTC clock. Rendered only after mount so server and client markup agree. */
-function NodeClock() {
-  const [stamp, setStamp] = useState<string | null>(null);
+const SECONDARY: NavItem[] = [
+  { href: "/counterfactual", label: "Counterfactual" },
+  { href: "/validation", label: "Validation" },
+  { href: "/federation", label: "Federation" },
+  { href: "/integration", label: "Google AI integration" },
+];
 
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const p = (n: number) => String(n).padStart(2, "0");
-      setStamp(
-        `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}Z`
-      );
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
+function Seal({ className }: { className?: string }) {
   return (
-    <span className="readout text-2xs text-text-tertiary tabular-nums w-[62px] text-right">
-      {stamp ?? "——:——"}
-    </span>
+    <svg width="20" height="20" viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M12 1.5l10.5 10.5L12 22.5 1.5 12z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 7.2l4.8 4.8-4.8 4.8-4.8-4.8z" fill="currentColor" />
+    </svg>
   );
 }
 
 export function NavBar() {
   const pathname = usePathname();
-  const [lifted, setLifted] = useState(false);
+  /*
+     The disclosure records which route it was opened on, rather than a plain
+     boolean reset by an effect. Navigating changes `pathname`, the comparison
+     stops matching, and the panel closes on the same render as the new page —
+     no effect, and no frame where a stale panel sits over fresh content.
+  */
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  const open = openFor === pathname;
+  const toggle = () => setOpenFor(open ? null : pathname);
 
-  useEffect(() => {
-    const onScroll = () => setLifted(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 h-11 flex items-center px-4 transition-colors duration-300",
-        lifted
-          ? "bg-bg-void/92 backdrop-blur-[2px] border-b border-border-subtle"
-          : "bg-transparent border-b border-transparent"
-      )}
-    >
-      {/* Wordmark. The lozenge is the seal mark used throughout the system. */}
-      <Link
-        href="/"
-        className="group mr-7 flex shrink-0 items-center gap-2.5"
-        aria-label="PRAMANA home"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M12 1.5l10.5 10.5L12 22.5 1.5 12z"
-            fill="none"
-            stroke="var(--color-accent-verify)"
-            strokeWidth="1.4"
-          />
-          <path d="M12 7.2l4.8 4.8-4.8 4.8-4.8-4.8z" fill="var(--color-accent-verify)" />
-        </svg>
-        <span className="font-display text-md font-semibold tracking-[0.01em] text-text-primary">
-          PRAMĀNA
-        </span>
-      </Link>
+    <nav className="sticky top-0 z-50 border-b-2 border-[var(--color-ink)] bg-[var(--color-paper)]">
+      <div className="mx-auto flex h-14 w-full max-w-[1500px] items-center gap-4 px-4 lg:px-6">
+        <Link
+          href="/"
+          className="group flex shrink-0 items-center gap-2.5 text-[var(--color-ink)]"
+          aria-label="PRAMANA home"
+        >
+          <Seal className="text-[var(--color-flat-mustard)] transition-transform duration-300 group-hover:rotate-90" />
+          <span className="poster text-[1.05rem] tracking-[0.01em]">PRAMĀNA</span>
+        </Link>
 
-      {/* Route rail */}
-      <div className="flex min-w-0 items-stretch overflow-x-auto">
-        {NAV_ITEMS.map(({ href, label, index, icon: Icon }) => {
-          const isActive =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
-          return (
+        <div className="ml-2 hidden items-center gap-1 md:flex">
+          {PRIMARY.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              aria-current={isActive ? "page" : undefined}
+              aria-current={isActive(href) ? "page" : undefined}
               className={cn(
-                "group relative flex shrink-0 items-center gap-1.5 border-r border-border-subtle/60 px-3 text-sm transition-colors duration-200 first:border-l",
-                isActive
-                  ? "text-accent-verify"
-                  : "text-text-tertiary hover:text-text-secondary"
+                "poster relative px-3 py-1.5 text-xs transition-colors",
+                isActive(href)
+                  ? "text-[var(--color-ink)]"
+                  : "text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
               )}
             >
-              <span
-                className={cn(
-                  "readout text-2xs transition-colors",
-                  isActive ? "text-accent-verify/70" : "text-text-quaternary"
-                )}
-              >
-                {index}
-              </span>
-              <Icon size={13} strokeWidth={1.3} />
-              <span className="font-ui">{label}</span>
-              {isActive && (
-                <span className="absolute inset-x-0 bottom-0 h-[2px] bg-accent-verify" />
+              {label}
+              {isActive(href) && (
+                <span className="absolute inset-x-3 -bottom-px h-[3px] bg-[var(--color-flat-mustard)]" />
               )}
             </Link>
-          );
-        })}
+          ))}
+
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            className="poster flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]"
+          >
+            More
+            <svg
+              width="10" height="7" viewBox="0 0 10 7" fill="none" aria-hidden="true"
+              className={cn("transition-transform duration-200", open && "rotate-180")}
+            >
+              <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-3">
+          <IntegrationChip />
+          <Link
+            href="/report"
+            className="btn-flat hidden bg-[var(--color-flat-mustard)] px-4 py-2 text-xs text-[var(--color-ink)] sm:inline-block"
+          >
+            Report the sky
+          </Link>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            aria-label="Open navigation"
+            className="md:hidden"
+          >
+            <svg width="22" height="16" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+              <path d="M0 1h22M0 8h22M0 15h22" stroke="var(--color-ink)" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* Node status strip */}
-      <div className="ml-auto flex shrink-0 items-center gap-4 pl-4">
-        <IntegrationChip />
-        <span className="label-technical hidden xl:inline">
-          Node IN-01
-        </span>
-        <NodeClock />
-        <span className="flex items-center gap-1.5">
-          <span className="hazard-pulse block h-1.5 w-1.5 bg-accent-clear" />
-          <span className="readout text-2xs text-text-tertiary">SYNC</span>
-        </span>
-      </div>
+      {open && (
+        <div className="border-t-2 border-[var(--color-ink)] bg-[var(--color-paper-deep)]">
+          <div className="mx-auto grid w-full max-w-[1500px] gap-px px-4 py-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
+            {[...PRIMARY.map((p) => ({ ...p, mobileOnly: true })), ...SECONDARY].map(
+              ({ href, label, ...rest }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "poster px-3 py-3 text-xs text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]",
+                    "mobileOnly" in rest && "md:hidden"
+                  )}
+                >
+                  {label}
+                </Link>
+              )
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

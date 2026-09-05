@@ -20,10 +20,10 @@ export const metadata: Metadata = {
 */
 
 const COMPETITORS = [
-  { key: "pramana", label: "PRAMĀNA", colour: "#e3a84e" },
-  { key: "googleAQ", label: "Google AQ", colour: "#5c8ae6" },
+  { key: "pramana", label: "PRAMĀNA", colour: "var(--color-accent-verify)" },
+  { key: "googleAQ", label: "Google AQ", colour: "var(--color-accent-signal)" },
   { key: "persistence", label: "Persistence", colour: "#8e9aab" },
-  { key: "climatology", label: "Climatology", colour: "#5b6775" },
+  { key: "climatology", label: "Climatology", colour: "var(--color-text-tertiary)" },
 ] as const;
 
 const SCHEMA_ARTEFACTS = [

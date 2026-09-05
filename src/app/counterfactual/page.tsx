@@ -256,18 +256,18 @@ export default function CounterfactualPage() {
                       </text>
                     </g>
                   ))}
-                  <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={H - PAD.bottom} stroke="#26313e" />
-                  <line x1={PAD.left} x2={W - PAD.right} y1={H - PAD.bottom} y2={H - PAD.bottom} stroke="#26313e" />
+                  <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={H - PAD.bottom} stroke="var(--color-border-default)" />
+                  <line x1={PAD.left} x2={W - PAD.right} y1={H - PAD.bottom} y2={H - PAD.bottom} stroke="var(--color-border-default)" />
                   {[-48, -24, 0, 24, 48].map((h) => (
                     <text key={h} x={x(h)} y={H - PAD.bottom + 16} textAnchor="middle"
-                      fill="#5b6775" fontSize="10" fontFamily="var(--font-mono)">
+                      fill="var(--color-text-tertiary)" fontSize="10" fontFamily="var(--font-mono)">
                       {h > 0 ? `+${h}` : h}h
                     </text>
                   ))}
                   {/* Original */}
-                  <path d={curve(1)} fill="none" stroke="#5b6775" strokeWidth="1.2" strokeDasharray="4 4" />
+                  <path d={curve(1)} fill="none" stroke="var(--color-text-tertiary)" strokeWidth="1.2" strokeDasharray="4 4" />
                   {/* Counterfactual */}
-                  <path d={curve(retained)} fill="none" stroke="#e3a84e" strokeWidth="2" />
+                  <path d={curve(retained)} fill="none" stroke="var(--color-accent-verify)" strokeWidth="2" />
                 </svg>
               </div>
               <figcaption className="border-t border-border-subtle px-3.5 py-3">

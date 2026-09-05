@@ -20,8 +20,8 @@ const SOURCE_META: Record<
   { label: string; colour: string }
 > = {
   agricultural_burning: { label: "Biomass", colour: "#c8763f" },
-  industrial: { label: "Industrial", colour: "#5c8ae6" },
-  vehicular: { label: "Vehicular", colour: "#2fbfb0" },
+  industrial: { label: "Industrial", colour: "var(--color-accent-signal)" },
+  vehicular: { label: "Vehicular", colour: "var(--color-accent-clear)" },
   mixed: { label: "Mixed", colour: "#8e9aab" },
 };
 
