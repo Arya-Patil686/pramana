@@ -69,13 +69,13 @@ function TopologyDiagram() {
           <defs>
             <marker id="fed-arrow" viewBox="0 0 8 8" refX="7" refY="4"
               markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M0 1 L7 4 L0 7 z" fill="#2fbfb0" />
+              <path d="M0 1 L7 4 L0 7 z" fill="var(--color-accent-clear)" />
             </marker>
           </defs>
 
           {/* Border */}
-          <line x1="500" y1="24" x2="500" y2="396" stroke="#3a4857" strokeWidth="1.5" strokeDasharray="7 6" />
-          <text x="500" y="18" textAnchor="middle" fill="#5b6775" fontSize="12"
+          <line x1="500" y1="24" x2="500" y2="396" stroke="var(--color-border-strong)" strokeWidth="1.5" strokeDasharray="7 6" />
+          <text x="500" y="18" textAnchor="middle" fill="var(--color-text-tertiary)" fontSize="12"
             fontFamily="var(--font-mono)" letterSpacing="2">
             SOVEREIGN BOUNDARY
           </text>
@@ -86,12 +86,12 @@ function TopologyDiagram() {
             { x: 610, label: "NODE TH-01", sub: "Thailand", corridor: "N. Thailand → Bangkok" },
           ].map((n) => (
             <g key={n.label}>
-              <rect x={n.x} y="60" width="300" height="300" fill="#10171f" stroke="#26313e" />
-              <rect x={n.x} y="60" width="300" height="30" fill="#17202a" />
-              <text x={n.x + 12} y="80" fill="#e3a84e" fontSize="13" fontFamily="var(--font-mono)" letterSpacing="1">
+              <rect x={n.x} y="60" width="300" height="300" fill="var(--color-bg-surface)" stroke="var(--color-border-default)" />
+              <rect x={n.x} y="60" width="300" height="30" fill="var(--color-bg-surface-2)" />
+              <text x={n.x + 12} y="80" fill="var(--color-accent-verify)" fontSize="13" fontFamily="var(--font-mono)" letterSpacing="1">
                 {n.label}
               </text>
-              <text x={n.x + 288} y="80" textAnchor="end" fill="#5b6775" fontSize="12" fontFamily="var(--font-mono)">
+              <text x={n.x + 288} y="80" textAnchor="end" fill="var(--color-text-tertiary)" fontSize="12" fontFamily="var(--font-mono)">
                 {n.sub}
               </text>
 
@@ -106,18 +106,18 @@ function TopologyDiagram() {
               ].map((l) => (
                 <g key={l.t}>
                   <rect x={n.x + 14} y={l.y} width="272" height="28"
-                    fill={l.locked ? "#080c11" : "#141c26"}
-                    stroke={l.locked ? "#1a222c" : "#26313e"} />
+                    fill={l.locked ? "var(--color-bg-inset)" : "#141c26"}
+                    stroke={l.locked ? "var(--color-border-subtle)" : "var(--color-border-default)"} />
                   <rect x={n.x + 14} y={l.y} width="3" height="28"
-                    fill={l.locked ? "#dd5e3c" : "#2fbfb0"} />
-                  <text x={n.x + 26} y={l.y + 18} fill={l.locked ? "#5b6775" : "#96a2b0"}
+                    fill={l.locked ? "var(--color-accent-hazard)" : "var(--color-accent-clear)"} />
+                  <text x={n.x + 26} y={l.y + 18} fill={l.locked ? "var(--color-text-tertiary)" : "var(--color-text-secondary)"}
                     fontSize="12" fontFamily="var(--font-mono)">
                     {l.t}
                   </text>
                 </g>
               ))}
 
-              <text x={n.x + 14} y="352" fill="#3d4854" fontSize="11" fontFamily="var(--font-mono)">
+              <text x={n.x + 14} y="352" fill="var(--color-text-quaternary)" fontSize="11" fontFamily="var(--font-mono)">
                 {n.corridor}
               </text>
             </g>
@@ -130,12 +130,12 @@ function TopologyDiagram() {
             { y: 322, label: "AGG    coarse aggregates" },
           ].map((c) => (
             <g key={c.label}>
-              <line x1="392" y1={c.y} x2="606" y2={c.y} stroke="#2fbfb0" strokeWidth="1.3"
+              <line x1="392" y1={c.y} x2="606" y2={c.y} stroke="var(--color-accent-clear)" strokeWidth="1.3"
                 markerEnd="url(#fed-arrow)" opacity="0.85" />
-              <line x1="606" y1={c.y + 12} x2="392" y2={c.y + 12} stroke="#2fbfb0" strokeWidth="1.3"
+              <line x1="606" y1={c.y + 12} x2="392" y2={c.y + 12} stroke="var(--color-accent-clear)" strokeWidth="1.3"
                 markerEnd="url(#fed-arrow)" opacity="0.4" />
-              <rect x="418" y={c.y - 26} width="168" height="20" fill="#0b1015" />
-              <text x="502" y={c.y - 11} textAnchor="middle" fill="#2fbfb0"
+              <rect x="418" y={c.y - 26} width="168" height="20" fill="var(--color-bg-base)" />
+              <text x="502" y={c.y - 11} textAnchor="middle" fill="var(--color-accent-clear)"
                 fontSize="11" fontFamily="var(--font-mono)" letterSpacing="0.5">
                 {c.label}
               </text>
@@ -144,14 +144,14 @@ function TopologyDiagram() {
 
           {/* Blocked */}
           <g>
-            <line x1="392" y1="140" x2="606" y2="140" stroke="#dd5e3c" strokeWidth="1.2"
+            <line x1="392" y1="140" x2="606" y2="140" stroke="var(--color-accent-hazard)" strokeWidth="1.2"
               strokeDasharray="4 4" opacity="0.55" />
             <g transform="translate(486, 126)">
-              <rect width="30" height="28" fill="#0b1015" />
-              <path d="M6 8 L24 26 M24 8 L6 26" stroke="#dd5e3c" strokeWidth="1.8" />
+              <rect width="30" height="28" fill="var(--color-bg-base)" />
+              <path d="M6 8 L24 26 M24 8 L6 26" stroke="var(--color-accent-hazard)" strokeWidth="1.8" />
             </g>
-            <rect x="404" y="98" width="196" height="20" fill="#0b1015" />
-            <text x="502" y="113" textAnchor="middle" fill="#dd5e3c"
+            <rect x="404" y="98" width="196" height="20" fill="var(--color-bg-base)" />
+            <text x="502" y="113" textAnchor="middle" fill="var(--color-accent-hazard)"
               fontSize="11" fontFamily="var(--font-mono)" letterSpacing="0.5">
               RAW OBSERVATIONS BLOCKED
             </text>

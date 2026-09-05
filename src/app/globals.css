@@ -2,53 +2,61 @@
 
 /*
    PRAMANA · Atmospheric Ledger
-   Design language: night-operations instrument panel meets legal evidence file.
-   Rules: hairlines not shadows. Square corners. Depth via atmosphere, not blur.
-   No neon, no pastel, no purple. Colour carries meaning or it is not used.
+   Design language: printed field report. Flat paper, ink hairlines, square
+   corners, and colour that carries meaning or is not used.
+
+   This palette was originally a night-operations instrument panel. It now
+   sits on paper, because the front of the site is a drawn story and an
+   interior that stayed dark would read as a different product. The token
+   NAMES are unchanged on purpose — every existing surface picked up the new
+   palette without touching a single class — but every value below is chosen
+   for ink on cream, not phosphor on black.
 */
 
 @theme inline {
-  /* Surfaces. Deep blue-black, the colour of an unlit operations room. */
-  --color-bg-void: #06090d;
-  --color-bg-base: #0b1015;
-  --color-bg-surface: #10171f;
-  --color-bg-surface-2: #17202a;
-  --color-bg-inset: #080c11;
+  /* Surfaces. Paper stock, warm and slightly uneven. */
+  --color-bg-void: #ece2c2;
+  --color-bg-base: #f7f1dc;
+  --color-bg-surface: #fbf7e9;
+  --color-bg-surface-2: #f2ebd4;
+  --color-bg-inset: #efe6c9;
 
-  /* Borders are the primary structural device. */
-  --color-border-subtle: #1a222c;
-  --color-border-default: #26313e;
-  --color-border-strong: #3a4857;
-  --color-border-lit: #55677d;
+  /* Borders are the primary structural device. Ink at four weights. */
+  --color-border-subtle: #ddd2b4;
+  --color-border-default: #c3b892;
+  --color-border-strong: #9a8d68;
+  --color-border-lit: #1e2f4d;
 
   /* Text */
-  --color-text-primary: #e9edf1;
-  --color-text-secondary: #96a2b0;
-  --color-text-tertiary: #5b6775;
-  --color-text-quaternary: #3d4854;
+  --color-text-primary: #1e2f4d;
+  --color-text-secondary: #4a5b78;
+  --color-text-tertiary: #55627a;
+  --color-text-quaternary: #5f6c85;
 
-  /* Functional accents. Each maps to one system concept. */
-  --color-accent-verify: #e3a84e;
-  --color-accent-verify-dim: #6e5227;
-  --color-accent-hazard: #dd5e3c;
-  --color-accent-hazard-dim: #5e2a1b;
-  --color-accent-clear: #2fbfb0;
-  --color-accent-clear-dim: #16544d;
-  --color-accent-signal: #5c8ae6;
-  --color-accent-signal-dim: #253c63;
+  /* Functional accents. Each maps to one system concept, and each is
+     contrast-checked against the paper it sits on rather than inverted
+     from the old dark values. */
+  --color-accent-verify: #8a5c10;
+  --color-accent-verify-dim: #e3c98a;
+  --color-accent-hazard: #bc4227;
+  --color-accent-hazard-dim: #e9b3a3;
+  --color-accent-clear: #12655b;
+  --color-accent-clear-dim: #9ccfc8;
+  --color-accent-signal: #2f4a7c;
+  --color-accent-signal-dim: #aebdd8;
 
   /* Atmosphere. Used by plume, haze and particle rendering. */
-  --color-haze-near: #8e9aab;
-  --color-haze-far: #4a5563;
+  --color-haze-near: #b9a988;
+  --color-haze-far: #d6cbb0;
   --color-plume: #b8815b;
   --color-ember: #e8703a;
 
   /* AQI hazard ramp. Mirrors lib/utils.ts exactly. */
-  --color-aqi-good: #2fbfb0;
-  --color-aqi-moderate: #e3a84e;
-  --color-aqi-poor: #e0603f;
-  --color-aqi-verypoor: #c94430;
-  --color-aqi-severe: #a82e1f;
+  --color-aqi-good: #16776b;
+  --color-aqi-moderate: #c99022;
+  --color-aqi-poor: #d1653c;
+  --color-aqi-verypoor: #c2452a;
+  --color-aqi-severe: #a13020;
   --color-aqi-severeplus: #7d1a10;
 
   /* Type. Newsreader for editorial voice, Plex for instrumentation. */
@@ -80,9 +88,9 @@
 }
 
 :root {
-  --background: #0b1015;
-  --foreground: #e9edf1;
-  color-scheme: dark;
+  --background: #f7f1dc;
+  --foreground: #1e2f4d;
+  color-scheme: light;
 }
 
 *,
@@ -124,7 +132,7 @@ body {
 * { scrollbar-width: thin; scrollbar-color: var(--color-border-default) var(--color-bg-void); }
 
 ::selection {
-  background: rgba(227, 168, 78, 0.22);
+  background: rgba(234, 181, 75, 0.45);
   color: var(--color-text-primary);
 }
 
@@ -213,15 +221,15 @@ body {
 /* Graticule. Only inside map and chart figures, never as page furniture. */
 .graticule {
   background-image:
-    linear-gradient(to right, rgba(38, 49, 62, 0.55) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(38, 49, 62, 0.55) 1px, transparent 1px);
+    linear-gradient(to right, rgba(30, 47, 77, 0.16) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 47, 77, 0.16) 1px, transparent 1px);
   background-size: 64px 64px;
 }
 
 .graticule-fine {
   background-image:
-    linear-gradient(to right, rgba(38, 49, 62, 0.3) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(38, 49, 62, 0.3) 1px, transparent 1px);
+    linear-gradient(to right, rgba(30, 47, 77, 0.09) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 47, 77, 0.09) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
@@ -234,8 +242,8 @@ body {
   inset: 0;
   z-index: 100;
   pointer-events: none;
-  opacity: 0.035;
-  mix-blend-mode: overlay;
+  opacity: 0.10;
+  mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -243,8 +251,8 @@ body {
 .haze-top {
   background: linear-gradient(
     to bottom,
-    rgba(74, 85, 99, 0.16) 0%,
-    rgba(74, 85, 99, 0.05) 38%,
+    rgba(185, 169, 136, 0.34) 0%,
+    rgba(185, 169, 136, 0.12) 38%,
     transparent 72%
   );
 }
@@ -252,8 +260,8 @@ body {
 .haze-bottom {
   background: linear-gradient(
     to top,
-    rgba(11, 16, 21, 0.96) 0%,
-    rgba(11, 16, 21, 0.6) 42%,
+    rgba(247, 241, 220, 0.96) 0%,
+    rgba(247, 241, 220, 0.55) 42%,
     transparent 100%
   );
 }
@@ -261,8 +269,8 @@ body {
 .vignette {
   background: radial-gradient(
     120% 90% at 50% 42%,
-    transparent 30%,
-    rgba(6, 9, 13, 0.55) 100%
+    transparent 34%,
+    rgba(30, 47, 77, 0.14) 100%
   );
 }
 
@@ -270,7 +278,7 @@ body {
 
 .sealed {
   border-color: var(--color-accent-verify);
-  box-shadow: inset 0 0 0 1px rgba(227, 168, 78, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(162, 112, 26, 0.22);
 }
 
 .hash-block {
@@ -330,7 +338,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(150, 162, 176, 0.09),
+    rgba(30, 47, 77, 0.07),
     transparent
   );
   animation: ingest-sweep 1.5s var(--ease-instrument) infinite;
@@ -344,3 +352,206 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PRAMĀNA · Airshed — the illustrated layer
+
+   The narrative front of the site is drawn, not instrumented. Flat vector
+   shapes, hard colour-blocked horizons, no gradients doing structural work,
+   and a grain pass over everything so the flats read as printed rather than
+   as CSS.
+
+   The palette is not decorative. It is the CPCB air quality index, and the
+   page walks down it as the reader scrolls: scene one opens on a clean
+   Punjab dawn at AQI 40, and by the time the smoke reaches Delhi the whole
+   page is sitting at 482. The colour transition is the data.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@theme inline {
+  /* Sky, stepped down the CPCB index. */
+  --color-sky-good: #8ec5e2;
+  --color-sky-satisfactory: #a9cfd8;
+  --color-sky-moderate: #e2c98a;
+  --color-sky-poor: #e0a05c;
+  --color-sky-verypoor: #cf7345;
+  --color-sky-severe: #b04a34;
+
+  /* Ground, following the sky down: green fields to scorched earth. */
+  --color-land-field: #6aa96f;
+  --color-land-stubble: #c9a559;
+  --color-land-burnt: #8a6a44;
+  --color-land-city: #3f4d63;
+
+  /* Paper. The cream the illustrations sit on and the ink they are drawn in. */
+  --color-paper: #f7f1dc;
+  --color-paper-deep: #efe6c9;
+  --color-ink: #1e2f4d;
+  --color-ink-soft: #4a5b78;
+  --color-ink-faint: #7a879c;
+
+  /* The five illustration inks. Flat, saturated, no tints in between. */
+  --color-flat-teal: #3e9b8f;
+  --color-flat-coral: #e0674a;
+  --color-flat-mustard: #eab54b;
+  --color-flat-indigo: #2f4a7c;
+  --color-flat-cream: #faf6e6;
+  --color-flat-clay: #c9805e;
+  --color-flat-leaf: #4e8b5a;
+
+  /* Skin and hair blocks for the figures. Flat, no shading. */
+  --color-skin-1: #e8a07a;
+  --color-skin-2: #c97f56;
+  --color-skin-3: #9c5f3f;
+  --color-hair: #23212a;
+
+  --font-poster: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-hand: var(--font-caveat), var(--font-newsreader), cursive;
+
+  --text-poster-sm: 1.5rem;
+  --text-poster: 2.25rem;
+  --text-poster-lg: 3.25rem;
+  --text-poster-xl: 4.5rem;
+}
+
+/* ── Poster typography ────────────────────────────────── */
+
+/*
+   The display face is set tight, uppercase and centred, the way the
+   reference posters are. Optical letter-spacing is negative because
+   Poppins at weight 700 sets loose by default at these sizes.
+*/
+.poster {
+  font-family: var(--font-poster);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.018em;
+  line-height: 1.02;
+}
+
+/* Small italic serif over a dotted rule — the kicker that names each scene. */
+.kicker {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--text-xs);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.kicker-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+}
+.kicker-rule::before,
+.kicker-rule::after {
+  content: "";
+  height: 1px;
+  width: clamp(1.5rem, 8vw, 5rem);
+  background-image: radial-gradient(currentColor 40%, transparent 42%);
+  background-size: 4px 1px;
+  background-repeat: repeat-x;
+  opacity: 0.6;
+}
+
+/* Loose outline lettering, for the binary answers under each figure. */
+.outline-letters {
+  font-family: var(--font-hand);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  -webkit-text-stroke: 1.5px currentColor;
+  color: transparent;
+}
+
+/* ── Scene surfaces ───────────────────────────────────── */
+
+/*
+   A scene is one viewport of drawn world. The horizon is a hard edge, not a
+   gradient — that single decision is most of what separates this look from a
+   generic hero section.
+*/
+.scene {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Printed grain over the flats. Heavier than the instrument grain was,
+   because flat colour shows banding without it. */
+.paper-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* Speckle: the scattered dots and dashes that fill the reference skies. */
+.speckle {
+  background-image:
+    radial-gradient(currentColor 45%, transparent 47%),
+    radial-gradient(currentColor 45%, transparent 47%);
+  background-size: 90px 90px, 140px 140px;
+  background-position: 0 0, 45px 70px;
+  opacity: 0.18;
+}
+
+/* ── Illustrated controls ─────────────────────────────── */
+
+/*
+   Buttons here are drawn objects: a flat fill, a hard offset shadow instead
+   of a blur, and a press that moves the object onto its own shadow.
+*/
+.btn-flat {
+  font-family: var(--font-poster);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 2px solid var(--color-ink);
+  box-shadow: 4px 4px 0 var(--color-ink);
+  transition:
+    transform 140ms var(--ease-panel),
+    box-shadow 140ms var(--ease-panel);
+}
+.btn-flat:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--color-ink);
+}
+.btn-flat:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--color-ink);
+}
+
+/* Cards use the same drawn-object logic. */
+.card-flat {
+  border: 2px solid var(--color-ink);
+  box-shadow: 5px 5px 0 var(--color-ink);
+}
+
+/* ── Illustrated motion ───────────────────────────────── */
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50% { transform: rotate(1.6deg); }
+}
+.sway { animation: sway 5s ease-in-out infinite; transform-origin: bottom center; }
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+.bob { animation: bob 4.5s ease-in-out infinite; }
+
+@keyframes drift-x {
+  from { transform: translateX(-8%); }
+  to { transform: translateX(108%); }
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scaleY(1) translateY(0); opacity: 0.92; }
+  50% { transform: scaleY(1.16) translateY(-2px); opacity: 1; }
+}
+.flicker { animation: flicker 900ms ease-in-out infinite; transform-origin: bottom center; }

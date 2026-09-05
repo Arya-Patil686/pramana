@@ -327,7 +327,7 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
               markerHeight="5"
               orient="auto"
             >
-              <path d="M0 1 L7 4 L0 7 z" fill="#5c8ae6" opacity="0.75" />
+              <path d="M0 1 L7 4 L0 7 z" fill="var(--color-accent-signal)" opacity="0.75" />
             </marker>
           </defs>
 
@@ -340,14 +340,14 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
                   x2={proj.width}
                   y1={proj.y(lat)}
                   y2={proj.y(lat)}
-                  stroke="#26313e"
+                  stroke="var(--color-border-default)"
                   strokeWidth="0.8"
                   opacity="0.6"
                 />
                 <text
                   x={6}
                   y={proj.y(lat) - 5}
-                  fill="#3d4854"
+                  fill="var(--color-text-quaternary)"
                   fontSize="11"
                   fontFamily="var(--font-mono)"
                 >
@@ -362,14 +362,14 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
                   y2={proj.height}
                   x1={proj.x(lng)}
                   x2={proj.x(lng)}
-                  stroke="#26313e"
+                  stroke="var(--color-border-default)"
                   strokeWidth="0.8"
                   opacity="0.6"
                 />
                 <text
                   x={proj.x(lng) + 5}
                   y={proj.height - 8}
-                  fill="#3d4854"
+                  fill="var(--color-text-quaternary)"
                   fontSize="11"
                   fontFamily="var(--font-mono)"
                 >
@@ -409,7 +409,7 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  stroke="#5c8ae6"
+                  stroke="var(--color-accent-signal)"
                   strokeWidth="1.4"
                   opacity="0.55"
                   markerEnd="url(#wind-head)"
@@ -422,7 +422,7 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
           <path
             d={`M ${sourceCentroid.px} ${sourceCentroid.py} Q ${control.px} ${control.py} ${receptorPx.px} ${receptorPx.py}`}
             fill="none"
-            stroke="#5c8ae6"
+            stroke="var(--color-accent-signal)"
             strokeWidth="1.2"
             strokeDasharray="5 5"
             opacity="0.45"
@@ -448,7 +448,7 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
                     cy={f.py}
                     r={r}
                     fill={lit ? "#ffb066" : "none"}
-                    stroke={lit ? "#ffd9a8" : "#3d4854"}
+                    stroke={lit ? "#ffd9a8" : "var(--color-text-quaternary)"}
                     strokeWidth="1"
                   />
                 </g>
@@ -471,13 +471,13 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
                     width="9"
                     height="9"
                     fill={aqiToColor(shown)}
-                    stroke="#0b1015"
+                    stroke="var(--color-bg-base)"
                     strokeWidth="1.2"
                   />
                   <text
                     x={x + 9}
                     y={y + 3.5}
-                    fill="#96a2b0"
+                    fill="var(--color-text-secondary)"
                     fontSize="12"
                     fontFamily="var(--font-mono)"
                   >
@@ -495,15 +495,15 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
               cy={receptorPx.py}
               r="15"
               fill="none"
-              stroke="#2fbfb0"
+              stroke="var(--color-accent-clear)"
               strokeWidth="1.2"
               opacity="0.75"
             />
-            <circle cx={receptorPx.px} cy={receptorPx.py} r="3" fill="#2fbfb0" />
+            <circle cx={receptorPx.px} cy={receptorPx.py} r="3" fill="var(--color-accent-clear)" />
             <text
               x={receptorPx.px + 21}
               y={receptorPx.py - 6}
-              fill="#e9edf1"
+              fill="var(--color-text-primary)"
               fontSize="15"
               fontFamily="var(--font-mono)"
               letterSpacing="1"
@@ -513,7 +513,7 @@ export function CorridorReplay({ episode }: { episode: Episode }) {
             <text
               x={receptorPx.px + 21}
               y={receptorPx.py + 10}
-              fill="#5b6775"
+              fill="var(--color-text-tertiary)"
               fontSize="12"
               fontFamily="var(--font-mono)"
             >
