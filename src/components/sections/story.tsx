@@ -42,6 +42,11 @@ export interface LiveConditions {
   windLive: boolean;
   fireCount: number;
   firesLive: boolean;
+  /** Hours from first ignition to peak arrival, from the episode replay. */
+  transportHours: number;
+  /** Leading source tehsil in the computed register, and its share. */
+  topSource: string | null;
+  topSharePct: number;
 }
 
 const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
@@ -119,14 +124,19 @@ export function Story({ live }: { live: LiveConditions }) {
         <div className="absolute inset-x-0 z-20 flex items-center justify-center" style={{ top: "12%", bottom: "40%" }}>
           <SceneCopy
             kicker="2 November · 14:40 IST"
-            headline={<>So do nine hundred thousand others.</>}
+            headline={<>So do tens of thousands of others.</>}
             body={
               <>
-                Satellites counted{" "}
-                <strong className="font-semibold">{live.fireCount.toLocaleString("en-IN")}</strong>{" "}
-                active fires across Punjab and Haryana in this window
-                {live.firesLive ? ", read live from NASA FIRMS just now" : ", from the recorded episode"}.
-                One field is a farmer&apos;s problem. Nine hundred thousand is an
+                Punjab alone records tens of thousands of burning events in a
+                single post-monsoon season. This frame is holding{" "}
+                <strong className="font-semibold">
+                  {live.fireCount.toLocaleString("en-IN")}
+                </strong>{" "}
+                detections
+                {live.firesLive
+                  ? ", read live from NASA FIRMS a moment ago."
+                  : " from the recorded 2 November set."}{" "}
+                One field is a farmer&apos;s problem. A season of them is an
                 airshed.
               </>
             }
@@ -217,13 +227,17 @@ export function Story({ live }: { live: LiveConditions }) {
 
         <div className="absolute inset-x-0 z-20 flex items-center justify-center" style={{ top: "11%", bottom: "40%" }}>
           <SceneCopy
-            kicker="Forty hours later · 3 November, 18:00"
+            kicker={`${live.transportHours} hours later · 3 November, 18:00`}
             headline={<>A child in Delhi breathes it.</>}
             body={
               <>
-                The receptor network crosses AQI 400 at six in the evening and
-                peaks near 482 before dawn. Schools shut. Nothing that happened
-                here caused it, and nothing that happens here can stop it.
+                {/* Built as one string: splitting a sentence across JSX
+                    expressions leaves stray spaces before its punctuation. */}
+                {`Running the episode through the transport model puts the peak arrival ${live.transportHours} hours after the first ignition${
+                  live.topSource
+                    ? `, with ${live.topSource} the largest single contributor at ${live.topSharePct.toFixed(1)}%`
+                    : ""
+                }. Nothing that happened in this city caused it, and nothing that happens in this city can stop it.`}
               </>
             }
             ink="var(--color-flat-cream)"
