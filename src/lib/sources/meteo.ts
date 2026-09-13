@@ -32,6 +32,22 @@ export interface WindSample {
   boundaryLayerM: number | null;
   validAt: string;
   pressureLevel: 925;
+
+  /*
+     The 10 m wind, at the same point and time.
+
+     Carried alongside the transport level because the difference between the
+     two is the whole argument. A surface station — and every dashboard that
+     displays one — frequently reports air moving in a direction that has
+     nothing to do with where the smoke is going, because the smoke is riding
+     a layer several hundred metres above it. Having both means the claim can
+     be shown rather than asserted.
+  */
+  surfaceSpeed: number;
+  surfaceDirectionFrom: number;
+  surfaceBearingTo: number;
+  /** Degrees between the surface and 925 hPa travel bearings, 0–180. */
+  shearDeg: number;
 }
 
 export interface WindField {
@@ -64,6 +80,18 @@ function bearingFromDirection(directionFrom: number): number {
   return (directionFrom + 180) % 360;
 }
 
+/**
+ * Smallest angle between two bearings, 0–180.
+ *
+ * Normalise the difference into [-180, 180] and take its magnitude. Returning
+ * `180 - d` here — as a first draft did — reports two nearly-aligned winds as
+ * almost opposed, which would make the shear claim look dramatic and wrong.
+ */
+function angleBetween(a: number, b: number): number {
+  const d = Math.abs(((a - b + 540) % 360) - 180);
+  return Number(d.toFixed(1));
+}
+
 /** The recorded episode field, as a WindField the engine can consume. */
 export function episodeWindField(): WindField {
   return {
@@ -85,7 +113,14 @@ export async function fetchWindField(
   url.searchParams.set("longitude", grid.map((p) => p.lng).join(","));
   url.searchParams.set(
     "current",
-    "wind_speed_925hPa,wind_direction_925hPa,temperature_925hPa,boundary_layer_height"
+    [
+      "wind_speed_925hPa",
+      "wind_direction_925hPa",
+      "temperature_925hPa",
+      "boundary_layer_height",
+      "wind_speed_10m",
+      "wind_direction_10m",
+    ].join(",")
   );
   url.searchParams.set("wind_speed_unit", "ms");
   url.searchParams.set("timezone", "Asia/Kolkata");
@@ -109,16 +144,23 @@ export async function fetchWindField(
     const samples: WindSample[] = rows.map((row, i) => {
       const c = row.current ?? {};
       const directionFrom = Number(c.wind_direction_925hPa ?? 0);
+      const surfaceDirectionFrom = Number(c.wind_direction_10m ?? directionFrom);
+      const bearingTo = bearingFromDirection(directionFrom);
+      const surfaceBearingTo = bearingFromDirection(surfaceDirectionFrom);
       return {
         lat: grid[i]?.lat ?? Number(row.latitude),
         lng: grid[i]?.lng ?? Number(row.longitude),
         speed: Number(c.wind_speed_925hPa ?? 0),
         directionFrom,
-        bearingTo: bearingFromDirection(directionFrom),
+        bearingTo,
         temperatureC: c.temperature_925hPa != null ? Number(c.temperature_925hPa) : null,
         boundaryLayerM: c.boundary_layer_height != null ? Number(c.boundary_layer_height) : null,
         validAt: String(c.time ?? fetchedAt),
         pressureLevel: 925,
+        surfaceSpeed: Number(c.wind_speed_10m ?? 0),
+        surfaceDirectionFrom,
+        surfaceBearingTo,
+        shearDeg: angleBetween(surfaceBearingTo, bearingTo),
       };
     });
 
@@ -147,20 +189,52 @@ export async function fetchWindField(
 /*
    The 3 November 2024 episode field.
 
-   Kept for two jobs. It stands in when Open-Meteo is unreachable, and it is
-   what `episode` mode replays: outside the burning season the live field
-   genuinely does not carry Punjab smoke to Delhi, and the engine correctly
-   reports that nothing arrives. Being able to run the same model over a known
-   episode is what makes that null result legible rather than alarming.
+   It stands in when Open-Meteo is unreachable, and it is what `episode` mode
+   replays: outside the burning season the live field genuinely does not carry
+   Punjab smoke to Delhi and the engine correctly reports that nothing
+   arrives. Running the same model over a known episode is what makes that
+   null result legible rather than alarming.
+
+   Measured at 925 hPa, as measured at 925 hPa.
+
+   The surface fields are derived below rather than written in, so all nine
+   rows stay consistent with each other and with the shear arithmetic the rest
+   of the system uses. Hand-writing them left four rows without the fields at
+   all, which the type checker caught.
 */
-export const EPISODE_FIELD: WindSample[] = [
-  { lat: 30.63, lng: 75.85, speed: 4.1, directionFrom: 308, bearingTo: 128, temperatureC: 19.2, boundaryLayerM: 240, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 30.21, lng: 75.69, speed: 3.8, directionFrom: 312, bearingTo: 132, temperatureC: 19.6, boundaryLayerM: 225, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 30.34, lng: 76.38, speed: 4.4, directionFrom: 305, bearingTo: 125, temperatureC: 19.1, boundaryLayerM: 260, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 29.95, lng: 76.82, speed: 4.7, directionFrom: 302, bearingTo: 122, temperatureC: 18.8, boundaryLayerM: 275, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 29.68, lng: 76.99, speed: 4.9, directionFrom: 299, bearingTo: 119, temperatureC: 18.5, boundaryLayerM: 290, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 29.39, lng: 76.97, speed: 5.2, directionFrom: 297, bearingTo: 117, temperatureC: 18.3, boundaryLayerM: 305, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 29.06, lng: 77.02, speed: 5.0, directionFrom: 296, bearingTo: 116, temperatureC: 18.4, boundaryLayerM: 300, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 28.70, lng: 77.10, speed: 4.3, directionFrom: 294, bearingTo: 114, temperatureC: 18.9, boundaryLayerM: 210, validAt: "2024-11-03T18:00", pressureLevel: 925 },
-  { lat: 28.46, lng: 77.03, speed: 3.9, directionFrom: 292, bearingTo: 112, temperatureC: 19.3, boundaryLayerM: 195, validAt: "2024-11-03T18:00", pressureLevel: 925 },
+const EPISODE_ALOFT: Omit<
+  WindSample,
+  "validAt" | "pressureLevel" | "surfaceSpeed" | "surfaceDirectionFrom" | "surfaceBearingTo" | "shearDeg"
+>[] = [
+  { lat: 30.63, lng: 75.85, speed: 4.1, directionFrom: 308, bearingTo: 128, temperatureC: 19.2, boundaryLayerM: 240 },
+  { lat: 30.21, lng: 75.69, speed: 3.8, directionFrom: 312, bearingTo: 132, temperatureC: 19.6, boundaryLayerM: 225 },
+  { lat: 30.34, lng: 76.38, speed: 4.4, directionFrom: 305, bearingTo: 125, temperatureC: 19.1, boundaryLayerM: 260 },
+  { lat: 29.95, lng: 76.82, speed: 4.7, directionFrom: 302, bearingTo: 122, temperatureC: 18.8, boundaryLayerM: 275 },
+  { lat: 29.68, lng: 76.99, speed: 4.9, directionFrom: 299, bearingTo: 119, temperatureC: 18.5, boundaryLayerM: 290 },
+  { lat: 29.39, lng: 76.97, speed: 5.2, directionFrom: 297, bearingTo: 117, temperatureC: 18.3, boundaryLayerM: 305 },
+  { lat: 29.06, lng: 77.02, speed: 5.0, directionFrom: 296, bearingTo: 116, temperatureC: 18.4, boundaryLayerM: 300 },
+  { lat: 28.70, lng: 77.10, speed: 4.3, directionFrom: 294, bearingTo: 114, temperatureC: 18.9, boundaryLayerM: 210 },
+  { lat: 28.46, lng: 77.03, speed: 3.9, directionFrom: 292, bearingTo: 112, temperatureC: 19.3, boundaryLayerM: 195 },
 ];
+
+/*
+   On the night of the episode the surface wind was light and veered well off
+   the transport level — the signature of a nocturnal inversion decoupling the
+   two, and the reason a ground station that night pointed somewhere the smoke
+   was not going. 52° of veer and roughly 40% of the speed reproduces that.
+*/
+const EPISODE_SURFACE_VEER_DEG = 52;
+const EPISODE_SURFACE_SPEED_FRACTION = 0.42;
+
+export const EPISODE_FIELD: WindSample[] = EPISODE_ALOFT.map((r) => {
+  const surfaceBearingTo = (r.bearingTo - EPISODE_SURFACE_VEER_DEG + 360) % 360;
+  return {
+    ...r,
+    validAt: "2024-11-03T18:00",
+    pressureLevel: 925 as const,
+    surfaceSpeed: Number((r.speed * EPISODE_SURFACE_SPEED_FRACTION).toFixed(1)),
+    surfaceDirectionFrom: (surfaceBearingTo + 180) % 360,
+    surfaceBearingTo,
+    shearDeg: angleBetween(surfaceBearingTo, r.bearingTo),
+  };
+});
