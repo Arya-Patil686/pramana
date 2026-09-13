@@ -24,7 +24,7 @@ export function RegisterBars({
   const max = Math.max(...rows.map((r) => r.ciHigh));
 
   return (
-    <div className={cn("border-2 border-[var(--color-ink)]", className)}>
+    <div className={cn("border border-[var(--color-ink-hair)]", className)}>
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
         <span className="label-technical">Tehsil · share of biomass load</span>
         <span className="label-technical">95% interval</span>
@@ -105,7 +105,7 @@ export function ArrivalCurve({
   const peak = bins.reduce((a, b) => (b.load > a.load ? b : a), bins[0]);
 
   return (
-    <div className={cn("border-2 border-[var(--color-ink)]", className)}>
+    <div className={cn("border border-[var(--color-ink-hair)]", className)}>
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2.5">
         <span className="label-technical">Deposited load at receptor</span>
         <span className="label-technical">Peak {peak.hour} h</span>

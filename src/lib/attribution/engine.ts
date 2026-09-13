@@ -107,6 +107,25 @@ export interface StateContribution {
   frpTotal: number;
 }
 
+/**
+ * One puff's path, thinned for drawing.
+ *
+ * The map is not an illustration of transport — it is the transport. These
+ * are the same trajectories the register is computed from, sampled down to
+ * something an SVG can carry.
+ */
+export interface Trace {
+  /** [lat, lng] pairs, source first. */
+  points: [number, number][];
+  /** Fire Radiative Power of the releasing detection, MW. */
+  frp: number;
+  /** Hours to closest approach. */
+  hours: number;
+  /** Deposited load, relative to the largest single puff in the run. */
+  weight: number;
+  state: string | null;
+}
+
 export interface ArrivalBin {
   /** Hours from the earliest detection. */
   hour: number;
@@ -132,6 +151,8 @@ export interface AttributionResult {
   detectionsArriving: number;
   arrivalCurve: ArrivalBin[];
   peakTransportHours: number;
+  /** Drawable trajectories, strongest first. */
+  traces: Trace[];
   method: {
     model: string;
     transportLevel: string;
@@ -227,6 +248,7 @@ export function computeAttribution(
     detectionsArriving: 0,
     arrivalCurve: [],
     peakTransportHours: 0,
+    traces: [],
     method,
     empty: true,
   };
@@ -247,6 +269,9 @@ export function computeAttribution(
   const cells = new Map<string, Accum>();
   /* Arrival load binned by hour since the first detection. */
   const hourly = new Map<number, number>();
+  const rawTraces: { points: [number, number][]; frp: number; hours: number; load: number; state: string | null }[] = [];
+  /* Cell placement is looked up once per cell rather than per trace. */
+  const placeByCell = new Map<string, { state: string | null }>();
 
   let arriving = 0;
   let totalLoad = 0;
@@ -267,6 +292,7 @@ export function computeAttribution(
     cell.frpTotal += d.frp;
     cell.detections += 1;
     cells.set(key, cell);
+    if (!placeByCell.has(key)) placeByCell.set(key, { state: place(cell.lat, cell.lng).state });
 
     /* Advect this detection's puff forward until it reaches the receptor,
        leaves the useful window, or wanders out of the domain. */
@@ -275,6 +301,11 @@ export function computeAttribution(
     let hours = 0;
     let closest = Infinity;
     let closestAt = 0;
+
+    /* The path is kept as it is walked, sampled hourly. Recomputing it later
+       for the map would risk the drawing and the register disagreeing. */
+    const path: [number, number][] = [[d.lat, d.lng]];
+    let lastSample = 0;
 
     /*
        Run the trajectory to its closest approach rather than stopping at a
@@ -296,10 +327,18 @@ export function computeAttribution(
       lng += (u * dtSec) / 1000 / kmPerDegLng(lat);
       hours += STEP_MINUTES / 60;
 
+      if (hours - lastSample >= 1) {
+        path.push([lat, lng]);
+        lastSample = hours;
+      }
+
       const dist = haversineKm(lat, lng, receptor.lat, receptor.lng);
       if (dist < closest) {
         closest = dist;
         closestAt = hours;
+        /* Truncate at closest approach: past that the puff is receding and
+           drawing the tail would imply transport that never mattered. */
+        path.push([lat, lng]);
       }
       /* Once it is receding and well past, nothing better is coming. */
       if (dist > closest + 60) break;
@@ -322,6 +361,7 @@ export function computeAttribution(
 
     if (load < ARRIVAL_FLOOR) continue;
     const arrivedAt = closestAt;
+    rawTraces.push({ points: path, frp: d.frp, hours: closestAt, load, state: placeByCell.get(key)?.state ?? null });
 
     cell.arrivals += 1;
     cell.load += load;
@@ -445,6 +485,24 @@ export function computeAttribution(
   const upwindSharePct = Math.min(100, upwindAgg.pct);
   const upwindCi: [number, number] = [upwindAgg.low, upwindAgg.high];
 
+  /* Normalised against the strongest puff so the map can weight strokes, and
+     capped so a dense burning day cannot ship ten thousand paths to a
+     browser. */
+  const maxLoad = Math.max(...rawTraces.map((t) => t.load));
+  const traces: Trace[] = rawTraces
+    .sort((a, b) => b.load - a.load)
+    .slice(0, 160)
+    .map((t) => ({
+      points: t.points.map(([la, ln]) => [
+        Number(la.toFixed(4)),
+        Number(ln.toFixed(4)),
+      ]) as [number, number][],
+      frp: Number(t.frp.toFixed(1)),
+      hours: Number(t.hours.toFixed(1)),
+      weight: Number((t.load / maxLoad).toFixed(4)),
+      state: t.state,
+    }));
+
   const bins = [...hourly.entries()].sort((a, b) => a[0] - b[0]);
   const peakLoad = Math.max(...bins.map(([, v]) => v));
   const arrivalCurve: ArrivalBin[] = bins.map(([hour, load]) => ({
@@ -468,6 +526,7 @@ export function computeAttribution(
     detectionsArriving: arriving,
     arrivalCurve,
     peakTransportHours,
+    traces,
     method,
     empty: false,
   };

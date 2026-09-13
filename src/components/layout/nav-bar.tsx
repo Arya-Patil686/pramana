@@ -64,15 +64,15 @@ export function NavBar() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
-    <nav className="sticky top-0 z-50 border-b-2 border-[var(--color-ink)] bg-[var(--color-paper)]">
+    <nav className="sticky top-0 z-50 border-b border-[var(--color-ink-hair)] bg-[var(--color-stain-0)]/95 backdrop-blur-[2px]">
       <div className="mx-auto flex h-14 w-full max-w-[1500px] items-center gap-4 px-4 lg:px-6">
         <Link
           href="/"
           className="group flex shrink-0 items-center gap-2.5 text-[var(--color-ink)]"
           aria-label="PRAMANA home"
         >
-          <Seal className="text-[var(--color-flat-mustard)] transition-transform duration-300 group-hover:rotate-90" />
-          <span className="poster text-[1.05rem] tracking-[0.01em]">PRAMĀNA</span>
+          <Seal className="text-[var(--color-mark-bronze)] transition-transform duration-500 group-hover:rotate-90" />
+          <span className="poster text-[1.02rem] tracking-[0.005em]">PRAMĀNA</span>
         </Link>
 
         <div className="ml-2 hidden items-center gap-1 md:flex">
@@ -90,7 +90,7 @@ export function NavBar() {
             >
               {label}
               {isActive(href) && (
-                <span className="absolute inset-x-3 -bottom-px h-[3px] bg-[var(--color-flat-mustard)]" />
+                <span className="absolute inset-x-3 -bottom-px h-[2px] bg-[var(--color-ink)]" />
               )}
             </Link>
           ))}
@@ -115,7 +115,7 @@ export function NavBar() {
           <IntegrationChip />
           <Link
             href="/report"
-            className="btn-flat hidden bg-[var(--color-flat-mustard)] px-4 py-2 text-xs text-[var(--color-ink)] sm:inline-block"
+            className="btn-flat hidden bg-[var(--color-ink)] px-4 py-2 text-xs text-[var(--color-stain-0)] transition-colors hover:bg-[var(--color-ink-soft)] sm:inline-block"
           >
             Report the sky
           </Link>
@@ -134,7 +134,7 @@ export function NavBar() {
       </div>
 
       {open && (
-        <div className="border-t-2 border-[var(--color-ink)] bg-[var(--color-paper-deep)]">
+        <div className="border-t border-[var(--color-ink-hair)] bg-[var(--color-stain-1)]">
           <div className="mx-auto grid w-full max-w-[1500px] gap-px px-4 py-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
             {[...PRIMARY.map((p) => ({ ...p, mobileOnly: true })), ...SECONDARY].map(
               ({ href, label, ...rest }) => (

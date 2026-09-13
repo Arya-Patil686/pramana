@@ -1,6 +1,6 @@
 import "server-only";
 import { GoogleGenAI, Type } from "@google/genai";
-import { keyFor, specFor, type CapabilityId } from "./config";
+import { geminiBackend, specFor, type CapabilityId } from "./config";
 import type {
   Advisory,
   AuthorityAlert,
@@ -24,9 +24,22 @@ import {
    carried to the UI, so a silent downgrade is not possible.
 */
 
-function client(id: CapabilityId): GoogleGenAI | null {
-  const apiKey = keyFor(id);
-  return apiKey ? new GoogleGenAI({ apiKey }) : null;
+/*
+   One client, either backend. On Cloud Run with GOOGLE_CLOUD_PROJECT set this
+   is Vertex AI authenticating as the runtime service account, which is how it
+   should run in a ministry deployment — no key material in the environment.
+   On a laptop it is the Gemini API with a key from AI Studio.
+*/
+function client(): GoogleGenAI | null {
+  const backend = geminiBackend();
+  if (!backend) return null;
+  return backend.kind === "vertex"
+    ? new GoogleGenAI({
+        vertexai: true,
+        project: backend.project,
+        location: backend.location,
+      })
+    : new GoogleGenAI({ apiKey: backend.apiKey });
 }
 
 async function serve<T>(
@@ -35,7 +48,7 @@ async function serve<T>(
   live: (ai: GoogleGenAI, model: string) => Promise<T>
 ): Promise<Served<T>> {
   const spec = specFor(id);
-  const ai = client(id);
+  const ai = client();
   const started = Date.now();
 
   if (!ai) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchWindField } from "@/lib/sources/meteo";
 import { fetchFireDetections } from "@/lib/sources/firms";
 import { fetchAirQuality } from "@/lib/sources/airquality";
+import { fetchCpcbStations } from "@/lib/sources/cpcb";
 
 /*
    GET /api/sources — every upstream, fetched in parallel, each reporting
@@ -23,10 +24,11 @@ export async function GET(request: Request) {
   const corridor = searchParams.get("corridor") ?? "punjab-delhi";
   const language = searchParams.get("language") ?? "en";
 
-  const [wind, fires, air] = await Promise.all([
+  const [wind, fires, air, cpcb] = await Promise.all([
     fetchWindField(corridor),
     fetchFireDetections(),
     fetchAirQuality(RECEPTOR.lat, RECEPTOR.lng, language),
+    fetchCpcbStations(),
   ]);
 
   return NextResponse.json({
@@ -35,9 +37,19 @@ export async function GET(request: Request) {
     wind,
     fires,
     air,
+    cpcb: {
+      live: cpcb.live,
+      source: cpcb.source,
+      note: cpcb.note,
+      /* Station rows are large and the console only needs the worst few. */
+      stations: [...cpcb.stations]
+        .sort((a, b) => (b.aqi ?? 0) - (a.aqi ?? 0))
+        .slice(0, 12),
+      total: cpcb.stations.length,
+    },
     summary: {
-      liveUpstreams: [wind.live, fires.live, air.live].filter(Boolean).length,
-      totalUpstreams: 3,
+      liveUpstreams: [wind.live, fires.live, air.live, cpcb.live].filter(Boolean).length,
+      totalUpstreams: 4,
     },
   });
 }
