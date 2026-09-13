@@ -82,7 +82,10 @@ export function Story({ data }: { data: StoryData }) {
               }
             >
               <div className="mt-10 grid max-w-md grid-cols-3 gap-6">
-                <Stat value={`${upwindSharePct.toFixed(0)}%`} label="Attributed upwind" />
+                <Stat
+                  value={topSource ? `${topSharePct.toFixed(1)}%` : "—"}
+                  label={topSource ? `${topSource}, top source` : "No transport"}
+                />
                 <Stat value={`${transportHours} h`} label="Transport to receptor" />
                 <Stat value={fireCount.toLocaleString("en-IN")} label="Detections in frame" />
               </div>
@@ -203,9 +206,20 @@ export function Story({ data }: { data: StoryData }) {
               }
             >
               <div className="mt-9 grid max-w-sm grid-cols-2 gap-6">
-                <Stat value={`${upwindSharePct.toFixed(1)}%`} label="From outside Delhi" />
-                <Stat value={`${upwindCi[0].toFixed(0)}–${upwindCi[1].toFixed(0)}`} label="95% interval" />
+                <Stat
+                  value={`${upwindSharePct.toFixed(1)}%`}
+                  label="Of the biomass load, from outside Delhi"
+                />
+                <Stat
+                  value={`${upwindCi[0].toFixed(0)}–${upwindCi[1].toFixed(0)}`}
+                  label="95% interval"
+                />
               </div>
+              <p className="mt-4 max-w-md text-2xs leading-relaxed text-[var(--color-ink)]/55">
+                A thermal satellite cannot see traffic, construction or
+                industry, so this is the share of the biomass-attributable load
+                — not of everything Delhi is breathing.
+              </p>
               <MapNote
                 className="mt-8"
                 title="Curves"

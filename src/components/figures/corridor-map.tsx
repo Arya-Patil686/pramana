@@ -26,6 +26,17 @@ import { cn } from "@/lib/utils";
 /* Padding inside the viewBox, in world units (1 unit = 10 km). */
 const PAD = 2.6;
 
+/*
+   Every computed coordinate is quantised before it reaches the DOM.
+
+   Server and client agree on these values but not always on the last decimal
+   digit once serialised, which React reports as a hydration mismatch. Three
+   decimals in a viewBox this size is ~10 m on the ground — far past anything
+   the drawing can resolve — so nothing is lost by rounding, and the markup
+   gets smaller.
+*/
+const q = (n: number) => Math.round(n * 1000) / 1000;
+
 export interface CorridorMapProps {
   detections: FireDetection[];
   wind: WindSample[];
@@ -73,10 +84,10 @@ export function CorridorMap({
   ];
   const xs = pts.map((p) => p[0]);
   const zs = pts.map((p) => p[1]);
-  const minX = Math.min(...xs) - PAD;
-  const maxX = Math.max(...xs) + PAD;
-  const minZ = Math.min(...zs) - PAD;
-  const maxZ = Math.max(...zs) + PAD;
+  const minX = q(Math.min(...xs) - PAD);
+  const maxX = q(Math.max(...xs) + PAD);
+  const minZ = q(Math.min(...zs) - PAD);
+  const maxZ = q(Math.max(...zs) + PAD);
   const w = maxX - minX;
   const h = maxZ - minZ;
 
@@ -103,12 +114,12 @@ export function CorridorMap({
           {Array.from({ length: 34 }, (_, i) => {
             const lat = 28.2 + i * 0.1;
             const [, z] = project(lat, 74.6);
-            return <line key={`la${i}`} x1={minX} y1={z} x2={maxX} y2={z} />;
+            return <line key={`la${i}`} x1={q(minX)} y1={q(z)} x2={q(maxX)} y2={q(z)} />;
           })}
           {Array.from({ length: 34 }, (_, i) => {
             const lng = 74.6 + i * 0.1;
             const [x] = project(28.2, lng);
-            return <line key={`ln${i}`} x1={x} y1={minZ} x2={x} y2={maxZ} />;
+            return <line key={`ln${i}`} x1={q(x)} y1={q(minZ)} x2={q(x)} y2={q(maxZ)} />;
           })}
         </g>
       )}
@@ -118,11 +129,11 @@ export function CorridorMap({
         <g stroke={ink} strokeWidth={0.03} opacity={0.34}>
           {[29, 30, 31].map((lat) => {
             const [, z] = project(lat, 74.6);
-            return <line key={`d${lat}`} x1={minX} y1={z} x2={maxX} y2={z} />;
+            return <line key={`d${lat}`} x1={q(minX)} y1={q(z)} x2={q(maxX)} y2={q(z)} />;
           })}
           {[75, 76, 77].map((lng) => {
             const [x] = project(28.2, lng);
-            return <line key={`m${lng}`} x1={x} y1={minZ} x2={x} y2={maxZ} />;
+            return <line key={`m${lng}`} x1={q(x)} y1={q(minZ)} x2={q(x)} y2={q(maxZ)} />;
           })}
         </g>
       )}
@@ -159,26 +170,20 @@ export function CorridorMap({
                so the shaft is (sin, -cos) of the travel bearing. */
             const rad = (s.bearingTo * Math.PI) / 180;
             const len = 0.5 + s.speed * 0.13;
-            const dx = Math.sin(rad) * len;
-            const dz = -Math.cos(rad) * len;
-            const hx = x + dx;
-            const hz = z + dz;
+            const hx = q(x + Math.sin(rad) * len);
+            const hz = q(z - Math.cos(rad) * len);
             /* Arrow head, two short strokes back along the shaft. */
             const back = 0.26;
             const spread = 0.42;
-            const h1 = [
-              hx - Math.sin(rad - spread) * back,
-              hz + Math.cos(rad - spread) * back,
-            ];
-            const h2 = [
-              hx - Math.sin(rad + spread) * back,
-              hz + Math.cos(rad + spread) * back,
-            ];
+            const h1x = q(hx - Math.sin(rad - spread) * back);
+            const h1z = q(hz + Math.cos(rad - spread) * back);
+            const h2x = q(hx - Math.sin(rad + spread) * back);
+            const h2z = q(hz + Math.cos(rad + spread) * back);
             return (
               <g key={i} stroke="var(--color-mark-flow)" strokeWidth={0.05} fill="none" opacity={0.75} strokeLinecap="round">
-                <line x1={x} y1={z} x2={hx} y2={hz} />
-                <line x1={hx} y1={hz} x2={h1[0]} y2={h1[1]} />
-                <line x1={hx} y1={hz} x2={h2[0]} y2={h2[1]} />
+                <line x1={q(x)} y1={q(z)} x2={hx} y2={hz} />
+                <line x1={hx} y1={hz} x2={h1x} y2={h1z} />
+                <line x1={hx} y1={hz} x2={h2x} y2={h2z} />
               </g>
             );
           })}
@@ -191,11 +196,11 @@ export function CorridorMap({
           {shown.map((d, i) => {
             const [x, z] = project(d.lat, d.lng);
             /* Area scales with radiative power, so radius goes as sqrt. */
-            const r = 0.1 + Math.sqrt(d.frp / maxFrp) * 0.42;
+            const r = q(0.1 + Math.sqrt(d.frp / maxFrp) * 0.42);
             return (
               <g key={`${d.lat}-${d.lng}-${i}`}>
-                <circle cx={x} cy={z} r={r * 2.1} fill="var(--color-mark-ember)" opacity={0.1} />
-                <circle cx={x} cy={z} r={r} fill="var(--color-mark-ember)" opacity={0.82} />
+                <circle cx={q(x)} cy={q(z)} r={q(r * 2.1)} fill="var(--color-mark-ember)" opacity={0.1} />
+                <circle cx={q(x)} cy={q(z)} r={r} fill="var(--color-mark-ember)" opacity={0.82} />
               </g>
             );
           })}
@@ -209,9 +214,9 @@ export function CorridorMap({
             const [x, z] = project(receptor.lat, receptor.lng);
             return (
               <>
-                <circle cx={x} cy={z} r={1.05} fill="none" stroke="var(--color-mark-receptor)" strokeWidth={0.05} opacity={0.3} />
-                <circle cx={x} cy={z} r={0.5} fill="none" stroke="var(--color-mark-receptor)" strokeWidth={0.07} />
-                <circle cx={x} cy={z} r={0.16} fill="var(--color-mark-receptor)" />
+                <circle cx={q(x)} cy={q(z)} r={1.05} fill="none" stroke="var(--color-mark-receptor)" strokeWidth={0.05} opacity={0.3} />
+                <circle cx={q(x)} cy={q(z)} r={0.5} fill="none" stroke="var(--color-mark-receptor)" strokeWidth={0.07} />
+                <circle cx={q(x)} cy={q(z)} r={0.16} fill="var(--color-mark-receptor)" />
               </>
             );
           })()}
@@ -226,10 +231,10 @@ export function CorridorMap({
             const isReceptor = n.kind === "receptor";
             return (
               <g key={n.label}>
-                {!isReceptor && <circle cx={x} cy={z} r={0.08} fill={ink} opacity={0.55} />}
+                {!isReceptor && <circle cx={q(x)} cy={q(z)} r={0.08} fill={ink} opacity={0.55} />}
                 <text
-                  x={x + 0.3}
-                  y={z - 0.24}
+                  x={q(x + 0.3)}
+                  y={q(z - 0.24)}
                   fontSize={isReceptor ? 0.62 : 0.46}
                   fontWeight={isReceptor ? 600 : 500}
                   fill={ink}
