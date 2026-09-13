@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Story, type StoryData } from "@/components/sections/story";
+import { AirshedStage } from "@/components/sections/airshed-stage";
 import { fetchWindField, episodeWindField } from "@/lib/sources/meteo";
 import { fetchFireDetections } from "@/lib/sources/firms";
 import { computeAttribution } from "@/lib/attribution/engine";
@@ -90,9 +91,26 @@ export default async function OverviewPage() {
     upwindCi: replay.upwindCi,
   };
 
+  /* Mean shear across the corridor: how far apart the surface and transport
+     winds actually are. It is the headline number of the 3D stage, and it is
+     measured rather than asserted. */
+  const meanShearDeg =
+    episodeSamples.reduce((sum, s) => sum + s.shearDeg, 0) / Math.max(1, episodeSamples.length);
+
   return (
     <>
-      <Story data={data} />
+      <Story
+        data={data}
+        airshed={
+          <AirshedStage
+            detections={fires.detections}
+            wind={episodeSamples}
+            traces={replay.traces}
+            meanShearDeg={meanShearDeg}
+            windLive={false}
+          />
+        }
+      />
 
       {/* ── The instrument ──────────────────────────────── */}
       <section className="paper-grain relative bg-[var(--color-stain-0)] py-24">
