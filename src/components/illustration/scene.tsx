@@ -7,57 +7,33 @@ import { cn } from "@/lib/utils";
 /*
    The scene.
 
-   One viewport of drawn world: a flat sky, a flat ground, and a hard horizon
-   between them. That hard edge is most of what separates this look from a
-   generic hero with a gradient — the reference posters never blend the two,
-   and neither do we.
+   One viewport of a printed report. Scenes are stacked down the page and each
+   owns its own paper stock, so the page stains as the smoke arrives: clean
+   stock over Punjab at dawn, the colour of the air by the time the plume is
+   over Delhi. Nothing cross-fades — each scene is a separate printed page,
+   and the step between them is the point.
 
-   Scenes are stacked down the page and each one owns its own palette, so the
-   sky walks down the CPCB index as the reader scrolls: a clean Punjab dawn at
-   the top, AQI 482 over Delhi by the time the smoke arrives. Nothing
-   cross-fades. Each scene is a printed frame.
-
-   Layers inside a scene drift at different rates as it crosses the viewport.
-   `depth` is the only control: 0 is painted on the sky and barely moves, 1 is
-   at the reader's feet and moves most.
+   An earlier pass filled these with saturated colour and cartoon figures. The
+   colour progression survived that; the illustration did not. What sits in a
+   scene now is the map, and the map is data.
 */
 
 export interface SceneProps {
   children: React.ReactNode;
-  /** Any CSS colour. Use the --color-sky-* tokens. */
-  sky: string;
-  /** Omit for a scene with no ground — sky only, edge to edge. */
-  ground?: string;
-  /** Horizon height as a fraction of the scene, from the top. */
-  horizon?: number;
+  /** Paper stock. Use the --color-stain-* tokens. */
+  paper: string;
   className?: string;
-  /** Scenes are one viewport by default; taller ones get more scroll to move in. */
   height?: string;
   id?: string;
 }
 
-export function Scene({
-  children,
-  sky,
-  ground,
-  horizon = 0.66,
-  className,
-  height = "100svh",
-  id,
-}: SceneProps) {
+export function Scene({ children, paper, className, height = "100svh", id }: SceneProps) {
   return (
     <section
       id={id}
-      className={cn("scene paper-grain", className)}
-      style={{ background: sky, height, minHeight: height }}
+      className={cn("relative overflow-hidden paper-grain", className)}
+      style={{ background: paper, minHeight: height }}
     >
-      {ground && (
-        <div
-          className="absolute inset-x-0 bottom-0 z-0"
-          style={{ background: ground, height: `${(1 - horizon) * 100}%` }}
-          aria-hidden="true"
-        />
-      )}
       {children}
     </section>
   );
@@ -66,9 +42,10 @@ export function Scene({
 /**
  * A parallax layer inside a scene.
  *
- * Travel is expressed in viewport-relative units so a layer moves the same
- * proportion of the frame on a phone as on a monitor — using pixels here
- * makes near layers fly off small screens and barely register on large ones.
+ * Travel is in viewport-relative units so a layer moves the same proportion of
+ * the frame on a phone as on a monitor. Depth 0 barely moves; depth 1 moves
+ * most. Kept subtle here — an editorial page that slides around reads as a
+ * template, not a document.
  */
 export function SceneLayer({
   children,
@@ -88,10 +65,7 @@ export function SceneLayer({
     offset: ["start end", "end start"],
   });
 
-  /* Near layers travel further and in the opposite sense to far ones, which
-     is what produces the sense of the camera moving through rather than the
-     picture sliding past. */
-  const travel = depth * 22;
+  const travel = depth * 9;
   const y = useTransform(scrollYProgress, [0, 1], [`${travel}vh`, `${-travel}vh`]);
 
   return (
@@ -104,16 +78,16 @@ export function SceneLayer({
 }
 
 /**
- * The copy block: an italic kicker over a dotted rule, a poster headline, and
- * an optional line of prose. Centred, because every frame in the references
- * is centred and breaking that reads as a different site.
+ * The copy block: a tracked kicker, an editorial headline, a line of prose.
+ *
+ * Left-aligned and held to a measure. Centring every frame was part of what
+ * made the earlier pass read as a poster series rather than a report.
  */
 export function SceneCopy({
   kicker,
   headline,
   body,
   ink = "var(--color-ink)",
-  align = "center",
   className,
   children,
 }: {
@@ -121,33 +95,29 @@ export function SceneCopy({
   headline: React.ReactNode;
   body?: React.ReactNode;
   ink?: string;
-  align?: "center" | "left";
   className?: string;
   children?: React.ReactNode;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 22 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-18% 0px -18% 0px" }}
-      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-      className={cn(
-        "relative z-20 mx-auto w-full max-w-3xl px-6",
-        align === "center" ? "text-center" : "text-left",
-        className
-      )}
+      viewport={{ once: true, margin: "-15% 0px -15% 0px" }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className={cn("relative z-20 max-w-xl", className)}
       style={{ color: ink }}
     >
       {kicker && (
-        <div className={cn("kicker", align === "center" && "kicker-rule")}>
+        <div className="kicker flex items-center gap-2.5" style={{ opacity: 0.7 }}>
+          <span className="inline-block h-px w-6" style={{ background: "currentColor" }} />
           <span>{kicker}</span>
         </div>
       )}
-      <h2 className="poster mt-5 text-[clamp(1.9rem,5.2vw,3.6rem)]">{headline}</h2>
+      <h2 className="poster mt-4 text-[clamp(1.6rem,3.6vw,2.6rem)]">{headline}</h2>
       {body && (
         <p
-          className="mx-auto mt-6 max-w-xl text-[clamp(0.95rem,1.5vw,1.0625rem)] leading-relaxed"
-          style={{ color: "color-mix(in srgb, currentColor 78%, transparent)" }}
+          className="mt-5 max-w-lg text-[clamp(0.9rem,1.2vw,1rem)] leading-relaxed"
+          style={{ color: "color-mix(in srgb, currentColor 76%, transparent)" }}
         >
           {body}
         </p>
@@ -158,54 +128,55 @@ export function SceneCopy({
 }
 
 /**
- * The binary answer under a figure, hand-lettered.
+ * A figure caption in the map margin.
  *
- * The references use this constantly — a figure on the left and one on the
- * right, each captioned with a word — and it is the single most recognisable
- * device in the whole style.
+ * Every visual on the narrative pages carries one, naming what the marks are
+ * and where they came from. A map without a source line is an illustration.
  */
-export function Answer({
-  children,
+export function MapNote({
+  title,
+  source,
+  className,
   ink = "var(--color-ink)",
-  className,
 }: {
-  children: React.ReactNode;
+  title: string;
+  source: string;
+  className?: string;
   ink?: string;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn("outline-letters block text-center text-[clamp(2rem,5vw,3.4rem)] leading-none", className)}
-      style={{ color: ink }}
-    >
-      {children}
-    </span>
-  );
-}
-
-/**
- * A centred stage for the figures in a scene, sitting on the horizon.
- *
- * Figures are placed as a proportion of the frame rather than absolutely, so
- * the composition holds from a phone to a wide monitor without a separate
- * layout for each.
- */
-export function SceneStage({
-  children,
-  className,
-  bottom = "12%",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  bottom?: string;
 }) {
   return (
     <div
-      className={cn("pointer-events-none absolute inset-x-0 z-10", className)}
-      style={{ bottom }}
+      className={cn("max-w-[15rem] border-l pl-3", className)}
+      style={{ color: ink, borderColor: "color-mix(in srgb, currentColor 28%, transparent)" }}
     >
-      <div className="mx-auto flex w-full max-w-6xl items-end justify-between gap-6 px-6">
-        {children}
+      <div className="smallcaps" style={{ opacity: 0.85 }}>
+        {title}
+      </div>
+      <div className="font-technical mt-1.5 text-2xs leading-relaxed" style={{ opacity: 0.62 }}>
+        {source}
+      </div>
+    </div>
+  );
+}
+
+/** A single figure in a stat row: value, label, and a hairline above. */
+export function Stat({
+  value,
+  label,
+  ink = "var(--color-ink)",
+}: {
+  value: React.ReactNode;
+  label: string;
+  ink?: string;
+}) {
+  return (
+    <div
+      className="border-t pt-3"
+      style={{ color: ink, borderColor: "color-mix(in srgb, currentColor 30%, transparent)" }}
+    >
+      <div className="poster text-[clamp(1.3rem,2.6vw,2rem)] leading-none">{value}</div>
+      <div className="smallcaps mt-2" style={{ opacity: 0.6 }}>
+        {label}
       </div>
     </div>
   );

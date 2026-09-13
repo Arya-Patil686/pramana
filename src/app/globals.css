@@ -354,63 +354,44 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PRAMĀNA · Airshed — the illustrated layer
+   PRAMĀNA · Airshed — the narrative layer
 
-   The narrative front of the site is drawn, not instrumented. Flat vector
-   shapes, hard colour-blocked horizons, no gradients doing structural work,
-   and a grain pass over everything so the flats read as printed rather than
-   as CSS.
+   The front of the site is a printed atmospheric report, and its pages stain
+   as the smoke arrives. Scene one is clean stock; by the time the plume is
+   over Delhi the paper has gone the colour of the air. That progression is
+   the CPCB index, and it is the only place colour is allowed to carry the
+   argument on its own.
 
-   The palette is not decorative. It is the CPCB air quality index, and the
-   page walks down it as the reader scrolls: scene one opens on a clean
-   Punjab dawn at AQI 40, and by the time the smoke reaches Delhi the whole
-   page is sitting at 482. The colour transition is the data.
+   Deliberately muted. An earlier pass used saturated flats and read as a
+   children's book, which is the wrong register entirely for a document a
+   pollution control board is meant to act on. Editorial cartography, not
+   illustration: the marks on these pages are the real detections, the real
+   wind field and the real trajectories, drawn well.
    ═══════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  /* Sky, stepped down the CPCB index. */
-  --color-sky-good: #8ec5e2;
-  --color-sky-satisfactory: #a9cfd8;
-  --color-sky-moderate: #e2c98a;
-  --color-sky-poor: #e0a05c;
-  --color-sky-verypoor: #cf7345;
-  --color-sky-severe: #b04a34;
+  /* Paper, staining down the index. */
+  --color-stain-0: #f4f1ea;
+  --color-stain-1: #efe8d9;
+  --color-stain-2: #e4d8c1;
+  --color-stain-3: #d3c0a0;
+  --color-stain-4: #bda183;
+  --color-stain-5: #a2856a;
 
-  /* Ground, following the sky down: green fields to scorched earth. */
-  --color-land-field: #6aa96f;
-  --color-land-stubble: #c9a559;
-  --color-land-burnt: #8a6a44;
-  --color-land-city: #3f4d63;
+  /* Ink, on any of them. */
+  --color-ink: #191c1f;
+  --color-ink-soft: #4c545c;
+  --color-ink-faint: #7c848c;
+  --color-ink-hair: #c9c2b4;
 
-  /* Paper. The cream the illustrations sit on and the ink they are drawn in. */
-  --color-paper: #f7f1dc;
-  --color-paper-deep: #efe6c9;
-  --color-ink: #1e2f4d;
-  --color-ink-soft: #4a5b78;
-  --color-ink-faint: #7a879c;
-
-  /* The five illustration inks. Flat, saturated, no tints in between. */
-  --color-flat-teal: #3e9b8f;
-  --color-flat-coral: #e0674a;
-  --color-flat-mustard: #eab54b;
-  --color-flat-indigo: #2f4a7c;
-  --color-flat-cream: #faf6e6;
-  --color-flat-clay: #c9805e;
-  --color-flat-leaf: #4e8b5a;
-
-  /* Skin and hair blocks for the figures. Flat, no shading. */
-  --color-skin-1: #e8a07a;
-  --color-skin-2: #c97f56;
-  --color-skin-3: #9c5f3f;
-  --color-hair: #23212a;
+  /* Data marks. Four, and no more — a map that uses six is a map nobody
+     can read without a legend they will not consult. */
+  --color-mark-ember: #b8391f;
+  --color-mark-flow: #2b5f68;
+  --color-mark-bronze: #8a6114;
+  --color-mark-receptor: #1a1d21;
 
   --font-poster: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
-  --font-hand: var(--font-caveat), var(--font-newsreader), cursive;
-
-  --text-poster-sm: 1.5rem;
-  --text-poster: 2.25rem;
-  --text-poster-lg: 3.25rem;
-  --text-poster-xl: 4.5rem;
 }
 
 /* ── Poster typography ────────────────────────────────── */
@@ -420,47 +401,33 @@ body {
    reference posters are. Optical letter-spacing is negative because
    Poppins at weight 700 sets loose by default at these sizes.
 */
+/*
+   The display face. Sentence case at weight 600, not uppercase at 700 — the
+   all-caps setting was most of what made the earlier pass shout.
+*/
 .poster {
   font-family: var(--font-poster);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: -0.018em;
-  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -0.021em;
+  line-height: 1.06;
 }
 
-/* Small italic serif over a dotted rule — the kicker that names each scene. */
+/* Small caps for map labels and column heads, where uppercase belongs. */
+.smallcaps {
+  font-family: var(--font-poster);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+}
+
+/* The kicker that names each scene: small, tracked, no italic serif. */
 .kicker {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: var(--text-xs);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.kicker-rule {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.85rem;
-}
-.kicker-rule::before,
-.kicker-rule::after {
-  content: "";
-  height: 1px;
-  width: clamp(1.5rem, 8vw, 5rem);
-  background-image: radial-gradient(currentColor 40%, transparent 42%);
-  background-size: 4px 1px;
-  background-repeat: repeat-x;
-  opacity: 0.6;
-}
-
-/* Loose outline lettering, for the binary answers under each figure. */
-.outline-letters {
-  font-family: var(--font-hand);
+  font-family: var(--font-poster);
   font-weight: 500;
-  letter-spacing: 0.04em;
-  -webkit-text-stroke: 1.5px currentColor;
-  color: transparent;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
 
 /* ── Scene surfaces ───────────────────────────────────── */
@@ -484,7 +451,7 @@ body {
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  opacity: 0.16;
+  opacity: 0.09;
   mix-blend-mode: multiply;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
 }
@@ -508,50 +475,21 @@ body {
 .btn-flat {
   font-family: var(--font-poster);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border: 2px solid var(--color-ink);
-  box-shadow: 4px 4px 0 var(--color-ink);
-  transition:
-    transform 140ms var(--ease-panel),
-    box-shadow 140ms var(--ease-panel);
-}
-.btn-flat:hover {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--color-ink);
-}
-.btn-flat:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0 0 0 var(--color-ink);
+  letter-spacing: 0.005em;
+  border: 1px solid var(--color-ink);
+  transition: background-color 160ms var(--ease-panel), color 160ms var(--ease-panel);
 }
 
-/* Cards use the same drawn-object logic. */
 .card-flat {
-  border: 2px solid var(--color-ink);
-  box-shadow: 5px 5px 0 var(--color-ink);
+  border: 1px solid var(--color-ink-hair);
+  transition: border-color 160ms var(--ease-panel);
 }
+.card-flat:hover { border-color: var(--color-ink); }
 
 /* ── Illustrated motion ───────────────────────────────── */
 
-@keyframes sway {
-  0%, 100% { transform: rotate(-1.6deg); }
-  50% { transform: rotate(1.6deg); }
+/* A mark being drawn, rather than an object bouncing. */
+@keyframes draw-in {
+  from { stroke-dashoffset: var(--dash, 1000); }
+  to { stroke-dashoffset: 0; }
 }
-.sway { animation: sway 5s ease-in-out infinite; transform-origin: bottom center; }
-
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
-}
-.bob { animation: bob 4.5s ease-in-out infinite; }
-
-@keyframes drift-x {
-  from { transform: translateX(-8%); }
-  to { transform: translateX(108%); }
-}
-
-@keyframes flicker {
-  0%, 100% { transform: scaleY(1) translateY(0); opacity: 0.92; }
-  50% { transform: scaleY(1.16) translateY(-2px); opacity: 1; }
-}
-.flicker { animation: flicker 900ms ease-in-out infinite; transform-origin: bottom center; }

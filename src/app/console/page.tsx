@@ -3,11 +3,11 @@ import Link from "next/link";
 import { fetchFireDetections, PUNJAB_HARYANA_BBOX } from "@/lib/sources/firms";
 import { fetchWindField, episodeWindField } from "@/lib/sources/meteo";
 import { fetchAirQuality } from "@/lib/sources/airquality";
+import { fetchCpcbStations } from "@/lib/sources/cpcb";
 import { placeByCentroid } from "@/lib/sources/geocode";
 import { computeAttribution } from "@/lib/attribution/engine";
 import { listReports } from "@/lib/reports-store";
 import { ArrivalCurve, RegisterBars } from "@/components/figures/register-figures";
-import { Shrub, WindArrow } from "@/components/illustration/parts";
 
 export const metadata: Metadata = {
   title: "Operator console",
@@ -38,11 +38,27 @@ export default async function ConsolePage({
   const { mode: rawMode } = await searchParams;
   const mode = rawMode === "live" ? "live" : "episode";
 
-  const [fires, liveWind, air] = await Promise.all([
+  const [fires, liveWind, air, cpcb] = await Promise.all([
     fetchFireDetections(PUNJAB_HARYANA_BBOX, 2),
     fetchWindField("punjab-delhi"),
     fetchAirQuality(RECEPTOR.lat, RECEPTOR.lng),
+    fetchCpcbStations(),
   ]);
+
+  /*
+     CPCB outranks the Air Quality API for the receptor figure. Both are
+     shown, but only one carries statutory weight in a GRAP decision, and it
+     is not the one from a commercial API.
+  */
+  const receptorStation = [...cpcb.stations]
+    .filter((s) => s.state === "Delhi" && s.aqi != null)
+    .sort((a, b) => (b.aqi ?? 0) - (a.aqi ?? 0))[0];
+  const receptorAqi = receptorStation?.aqi ?? air.cpcbAqi;
+  const receptorSource = receptorStation
+    ? `${receptorStation.station} · CPCB${cpcb.live ? ", live" : ", recorded"}`
+    : air.live
+      ? "Google Air Quality API, live"
+      : "Recorded reading";
   const wind = mode === "live" ? liveWind : episodeWindField();
 
   const result = computeAttribution(
@@ -75,9 +91,9 @@ export default async function ConsolePage({
   return (
     <div className="pb-24">
       {/* ── Provenance strip ────────────────────────────── */}
-      <div className="border-b-2 border-[var(--color-ink)] bg-bg-void">
+      <div className="border-b border-[var(--color-ink-hair)] bg-bg-void">
         <div className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center gap-x-8 gap-y-3 px-6 py-3 lg:px-10">
-          <div className="flex items-stretch border-2 border-[var(--color-ink)]">
+          <div className="flex items-stretch border border-[var(--color-ink)]">
             {(["episode", "live"] as const).map((m) => (
               <Link
                 key={m}
@@ -85,7 +101,7 @@ export default async function ConsolePage({
                 aria-current={mode === m ? "true" : undefined}
                 className={`poster px-3.5 py-1.5 text-2xs ${
                   mode === m
-                    ? "bg-[var(--color-flat-mustard)] text-[var(--color-ink)]"
+                    ? "bg-[var(--color-ink)] text-[var(--color-stain-0)]"
                     : "text-text-tertiary hover:text-text-primary"
                 }`}
               >
@@ -96,7 +112,8 @@ export default async function ConsolePage({
 
           <Upstream label="Fires" live={fires.live} detail={`${fires.detections.length} detections`} />
           <Upstream label="Wind" live={wind.live} detail={`${meanSpeed.toFixed(1)} m/s · 925 hPa`} />
-          <Upstream label="Receptor" live={air.live} detail={air.cpcbAqi ? `AQI ${air.cpcbAqi}` : "—"} />
+          <Upstream label="CPCB" live={cpcb.live} detail={`${cpcb.stations.length} stations`} />
+          <Upstream label="Receptor" live={air.live} detail={receptorAqi ? `AQI ${receptorAqi}` : "—"} />
 
           <span className="ml-auto label-technical">
             Computed {new Date().toISOString().slice(11, 19)}Z
@@ -130,7 +147,7 @@ export default async function ConsolePage({
               </p>
               <Link
                 href="/console?mode=episode"
-                className="btn-flat mt-8 inline-block bg-[var(--color-flat-mustard)] px-6 py-3 text-sm text-[var(--color-ink)]"
+                className="btn-flat mt-8 inline-block bg-[var(--color-ink)] px-6 py-3 text-sm text-[var(--color-stain-0)] hover:bg-[var(--color-ink-soft)]"
               >
                 Replay the 3 November episode
               </Link>
@@ -174,14 +191,14 @@ export default async function ConsolePage({
                 )}
               </p>
 
-              <div className="mt-10 grid gap-px border-2 border-[var(--color-ink)] bg-border-subtle sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-10 grid gap-px border border-[var(--color-ink-hair)] bg-border-subtle sm:grid-cols-2 lg:grid-cols-4">
                 <Stat
                   label="Transport strength"
                   value={`${result.detectionsArriving}/${result.detectionsConsidered}`}
                   hint={`${(transportStrength * 100).toFixed(0)}% of detections deposit at the receptor`}
                 />
                 <Stat label="Peak transport" value={`${result.peakTransportHours} h`} hint="First ignition to peak arrival" />
-                <Stat label="Receptor AQI" value={air.cpcbAqi ? String(air.cpcbAqi) : "—"} hint={air.live ? "Google Air Quality, live" : "Recorded reading"} />
+                <Stat label="Receptor AQI" value={receptorAqi ? String(receptorAqi) : "—"} hint={receptorSource} />
                 <Stat label="Citizen reports" value={String(reports.length)} hint="Weighted, this node" />
               </div>
             </>
@@ -238,7 +255,6 @@ export default async function ConsolePage({
 
           {/* ── What the model cannot do ────────────────── */}
           <section className="relative overflow-hidden border-b border-border-subtle bg-bg-surface py-14">
-            <WindArrow className="pointer-events-none absolute right-[4%] top-[18%] w-40 text-text-quaternary opacity-20" />
             <div className="mx-auto w-full max-w-[1500px] px-6 lg:px-10">
               <h2 className="poster text-[1.35rem] text-text-primary">
                 What this model cannot do
@@ -267,13 +283,12 @@ export default async function ConsolePage({
       {/* ── Continue ────────────────────────────────────── */}
       <section className="py-14">
         <div className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center gap-4 px-6 lg:px-10">
-          <Link href="/advisory" className="btn-flat bg-[var(--color-flat-coral)] px-6 py-3 text-sm text-[var(--color-flat-cream)]">
+          <Link href="/advisory" className="btn-flat bg-[var(--color-ink)] px-6 py-3 text-sm text-[var(--color-stain-0)] hover:bg-[var(--color-ink-soft)]">
             Turn this into an advisory
           </Link>
-          <Link href="/certificate" className="btn-flat bg-[var(--color-flat-cream)] px-6 py-3 text-sm text-[var(--color-ink)]">
+          <Link href="/certificate" className="btn-flat px-6 py-3 text-sm text-[var(--color-ink)] hover:bg-[var(--color-stain-1)]">
             Seal it into a certificate
           </Link>
-          <Shrub className="ml-auto hidden h-14 w-auto text-[var(--color-flat-leaf)] opacity-40 lg:block" />
         </div>
       </section>
     </div>

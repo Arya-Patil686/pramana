@@ -49,18 +49,18 @@ export function IntegrationChip() {
           ? `${live} of ${total} Google capabilities are live on this deployment`
           : "No Google API key is configured; every capability is serving recorded output"
       }
-      className="group hidden items-center gap-1.5 border-2 border-[var(--color-ink)] px-2 py-1 transition-colors hover:bg-[var(--color-paper-deep)] sm:flex"
+      className="group hidden items-center gap-1.5 border border-[var(--color-ink-hair)] px-2 py-1 transition-colors hover:bg-[var(--color-stain-1)] sm:flex"
     >
       <IconIntegration
         size={12}
         strokeWidth={1.3}
-        className={anyLive ? "text-[var(--color-flat-teal)]" : "text-[var(--color-ink-faint)]"}
+        className={anyLive ? "text-[var(--color-mark-flow)]" : "text-[var(--color-ink-faint)]"}
       />
       <span className="font-technical text-2xs uppercase tracking-[0.12em] text-[var(--color-ink-soft)]">
         Google AI
       </span>
       <span
-        className={`font-technical text-2xs font-semibold ${anyLive ? "text-[var(--color-flat-teal)]" : "text-[var(--color-flat-clay)]"}`}
+        className={`font-technical text-2xs font-semibold ${anyLive ? "text-[var(--color-mark-flow)]" : "text-[var(--color-mark-ember)]"}`}
       >
         {summary ? `${live}/${total}` : "—"}
       </span>

@@ -4,7 +4,6 @@ import {
   IBM_Plex_Sans,
   IBM_Plex_Mono,
   Poppins,
-  Caveat,
 } from "next/font/google";
 import "./globals.css";
 import { NavBar } from "@/components/layout/nav-bar";
@@ -34,24 +33,15 @@ const plexSans = IBM_Plex_Sans({
 });
 
 /*
-   Poppins is the poster face. Geometric, friendly and very legible in heavy
-   weights at large sizes, which is what the illustrated scenes need — and it
-   sits naturally next to Google's own product typography.
-   Caveat carries the hand-lettered answers under the figures, the way the
-   reference posters letter YES and NO by hand rather than setting them.
+   Poppins is the display face: geometric, quiet at weight 600, and legible
+   from a caption to a headline. It also sits naturally beside Google's own
+   product typography, which is the register this is being read in.
 */
 const poppins = Poppins({
   subsets: ["latin"],
   variable: "--font-poppins",
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
-});
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  variable: "--font-caveat",
-  display: "swap",
-  weight: ["500", "600", "700"],
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -104,12 +94,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} ${poppins.variable} ${caveat.variable} antialiased`}
+      className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} ${poppins.variable} antialiased`}
     >
-      <body className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)]">
+      <body className="min-h-screen bg-[var(--color-stain-0)] text-[var(--color-ink)]">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:border-2 focus:border-[var(--color-ink)] focus:bg-[var(--color-flat-mustard)] focus:px-3 focus:py-2 focus:text-sm"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200] focus:border-2 focus:border-[var(--color-ink)] focus:bg-[var(--color-mark-bronze)] focus:px-3 focus:py-2 focus:text-sm"
         >
           Skip to content
         </a>
