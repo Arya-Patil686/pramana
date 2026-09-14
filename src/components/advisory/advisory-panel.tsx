@@ -238,7 +238,7 @@ export function AdvisoryPanel() {
                   "mt-7 inline-flex items-center gap-2.5 border px-5 py-2.5 text-sm transition-colors",
                   speaking
                     ? "border-accent-hazard bg-accent-hazard/10 text-accent-hazard"
-                    : "border-accent-verify bg-accent-verify/10 text-accent-verify hover:bg-accent-verify/20"
+                    : "border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-stain-0)] hover:bg-[var(--color-ink-soft)]"
                 )}
               >
                 <IconVoice size={14} className={speaking ? "hazard-pulse" : undefined} />

@@ -14,8 +14,16 @@
 */
 
 @theme inline {
-  /* Surfaces. Paper stock, warm and slightly uneven. */
-  --color-bg-void: #ece2c2;
+  /*
+     Surfaces. Paper stock, warm and slightly uneven.
+
+     bg-void and text-quaternary are set together: hint text at 11px on the
+     darkest stock was the one combination in the system that fell below AA
+     (4.09:1). Lightening the stock alone topped out at 4.45, and darkening
+     the text alone collapsed it into text-tertiary. Moving both a little
+     clears 4.5 and keeps the two text weights visibly distinct.
+  */
+  --color-bg-void: #eee5c8;
   --color-bg-base: #f7f1dc;
   --color-bg-surface: #fbf7e9;
   --color-bg-surface-2: #f2ebd4;
@@ -31,7 +39,7 @@
   --color-text-primary: #1e2f4d;
   --color-text-secondary: #4a5b78;
   --color-text-tertiary: #55627a;
-  --color-text-quaternary: #5f6c85;
+  --color-text-quaternary: #5a6780;
 
   /* Functional accents. Each maps to one system concept, and each is
      contrast-checked against the paper it sits on rather than inverted
@@ -163,12 +171,12 @@ body {
 }
 
 .label-technical {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.14em;
+  font-family: var(--font-poster);
+  font-size: 0.6875rem;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .readout {
@@ -179,9 +187,16 @@ body {
 
 /* ── Structural surfaces ──────────────────────────────── */
 
+/*
+   A framed surface.
+
+   Was a raised instrument panel; on paper it is a hairline box. Redefining it
+   here rather than editing ten call sites is the same move as remapping the
+   palette under its existing token names.
+*/
 .panel {
   background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-ink-hair);
 }
 
 .panel-inset {
@@ -189,27 +204,13 @@ body {
   border: 1px solid var(--color-border-subtle);
 }
 
-/* Corner ticks: the detail that makes a box read as an instrument bezel. */
+/*
+   Corner ticks made a box read as an instrument bezel. The editorial pages do
+   not want that, and there are ten call sites, so the class stays and stops
+   drawing rather than being removed from each of them.
+*/
 .bezel {
   position: relative;
-}
-.bezel::before,
-.bezel::after {
-  content: "";
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-color: var(--color-border-strong);
-  border-style: solid;
-  pointer-events: none;
-}
-.bezel::before {
-  top: -1px; left: -1px;
-  border-width: 1px 0 0 1px;
-}
-.bezel::after {
-  bottom: -1px; right: -1px;
-  border-width: 0 1px 1px 0;
 }
 
 .hairline {

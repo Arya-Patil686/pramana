@@ -1,9 +1,17 @@
 import { cn } from "@/lib/utils";
 
 /*
-   Shared structural primitives. Every figure on the site is wrapped in
-   <Figure>, which forces a caption and a source line. That constraint is
-   the reason the visuals read as instrument output rather than decoration.
+   Shared structural primitives.
+
+   Every figure on the site is wrapped in <Figure>, which forces a caption and
+   a source line. That constraint is the reason the visuals read as instrument
+   output rather than decoration.
+
+   These carry the editorial voice for the analytical pages the way
+   illustration/scene.tsx carries it for the narrative ones. Changing the
+   vocabulary here is what moved /report, /advisory and /integration onto the
+   new language without touching those files — the same reason the palette was
+   remapped under the existing token names rather than rewritten per page.
 */
 
 export function SectionHeader({
@@ -32,25 +40,24 @@ export function SectionHeader({
       {(index || kicker) && (
         <div
           className={cn(
-            "mb-4 flex items-center gap-3",
+            "kicker mb-4 flex items-center gap-2.5 text-text-tertiary",
             align === "center" && "justify-center"
           )}
         >
-          {index && (
-            <span className="readout border border-border-default px-1.5 py-0.5 text-2xs text-accent-verify">
-              {index}
-            </span>
-          )}
-          {kicker && <span className="label-technical">{kicker}</span>}
+          {/* A drawn rule rather than a numbered chip: the index is still
+              carried, but as part of the line instead of a badge. */}
+          <span className="inline-block h-px w-6 bg-current" aria-hidden="true" />
+          {index && index !== "—" && <span className="text-accent-verify">{index}</span>}
+          {kicker && <span>{kicker}</span>}
         </div>
       )}
-      <h2 className="font-display text-xl font-medium text-text-primary sm:text-2xl">
+      <h2 className="poster text-[clamp(1.4rem,3vw,2.15rem)] text-text-primary">
         {title}
       </h2>
       {lede && (
         <p
           className={cn(
-            "mt-5 max-w-2xl text-md leading-relaxed text-text-secondary",
+            "mt-5 max-w-2xl text-[0.95rem] leading-relaxed text-text-secondary",
             align === "center" && "mx-auto"
           )}
         >
@@ -77,21 +84,17 @@ export function Figure({
   bodyClassName?: string;
 }) {
   return (
-    <figure className={cn("panel bezel", className)}>
+    <figure className={cn("border border-[var(--color-ink-hair)] bg-bg-surface", className)}>
       {label && (
-        <div className="flex items-center justify-between border-b border-border-subtle px-3.5 py-2">
-          <span className="label-technical">{label}</span>
-          <span className="flex items-center gap-1.5">
-            <span className="block h-1 w-1 bg-accent-clear" />
-            <span className="readout text-2xs text-text-quaternary">RENDERED</span>
-          </span>
+        <div className="border-b border-border-subtle px-4 py-2.5">
+          <span className="smallcaps text-text-tertiary">{label}</span>
         </div>
       )}
       <div className={cn("relative", bodyClassName)}>{children}</div>
-      <figcaption className="border-t border-border-subtle px-3.5 py-3">
+      <figcaption className="border-t border-border-subtle px-4 py-3.5">
         <p className="text-sm leading-relaxed text-text-secondary">{caption}</p>
         {source && (
-          <p className="readout mt-1.5 text-2xs text-text-quaternary">{source}</p>
+          <p className="font-technical mt-1.5 text-2xs text-text-quaternary">{source}</p>
         )}
       </figcaption>
     </figure>
@@ -122,20 +125,18 @@ export function Readout({
   }[tone];
 
   return (
-    <div className={cn("panel-inset px-3.5 py-3", className)}>
-      <div className="label-technical">{label}</div>
-      <div className="mt-1.5 flex items-baseline gap-1.5">
-        <span className={cn("readout text-lg font-medium leading-none", toneClass)}>
+    <div className={cn("bg-bg-base px-4 py-3.5", className)}>
+      <div className="smallcaps text-text-tertiary">{label}</div>
+      <div className="mt-2 flex items-baseline gap-1.5">
+        <span className={cn("poster text-[1.5rem] leading-none", toneClass)}>
           {value}
         </span>
         {unit && (
-          <span className="readout text-2xs text-text-tertiary">{unit}</span>
+          <span className="font-technical text-2xs text-text-tertiary">{unit}</span>
         )}
       </div>
       {hint && (
-        <div className="mt-1.5 text-2xs leading-snug text-text-quaternary">
-          {hint}
-        </div>
+        <div className="mt-2 text-2xs leading-snug text-text-quaternary">{hint}</div>
       )}
     </div>
   );
@@ -169,14 +170,15 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 border px-2 py-0.5",
+        "inline-flex items-center gap-1.5 border px-2.5 py-1",
         map
       )}
     >
-      <span className={cn("block h-1 w-1", dot, pulse && "hazard-pulse")} />
-      <span className="readout text-2xs uppercase tracking-[0.1em]">
-        {children}
-      </span>
+      <span
+        className={cn("block h-1.5 w-1.5 rounded-full", dot, pulse && "hazard-pulse")}
+        aria-hidden="true"
+      />
+      <span className="smallcaps">{children}</span>
     </span>
   );
 }
