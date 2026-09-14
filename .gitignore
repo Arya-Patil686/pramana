@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# The template carries no secrets and the README tells people to copy it, so
+# it has to be in the repo. Without this exception `.env*` swallowed it and a
+# fresh clone had nothing to copy.
+!.env.example
 
 # vercel
 .vercel
