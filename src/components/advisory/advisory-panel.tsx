@@ -33,7 +33,12 @@ interface AdvisoryPayload {
     headlineLocalised: string;
     bodyLocalised: string;
   };
-  publicMessage: { headline: string; instructions: string[]; reviewed: boolean };
+  publicMessage: {
+    headline: string;
+    instructions: string[];
+    via: "reviewed" | "generated" | "english-fallback";
+    model: string | null;
+  };
   speech: {
     audioBase64: string | null;
     languageCode: string;
@@ -43,7 +48,12 @@ interface AdvisoryPayload {
   spokenText: string;
   provenance: {
     advisory: { mode: string; model: string; latencyMs: number; fellBackBecause: string | null };
-    translation: { mode: string; translated: boolean };
+    translation: {
+      mode: string;
+      translated: boolean;
+      narrativeVia: "cloud-translation" | "gemini" | "none";
+      publicVia: string;
+    };
     speech: { mode: string } | null;
   };
 }
@@ -207,8 +217,20 @@ export function AdvisoryPanel() {
           <div className="bg-bg-base p-6 lg:p-8" dir={spec.rtl ? "rtl" : "ltr"}>
             <div className="flex items-center justify-between gap-4" dir="ltr">
               <span className="label-technical">Public message</span>
-              <StatusChip tone={data.publicMessage.reviewed ? "clear" : "verify"}>
-                {data.publicMessage.reviewed ? "Reviewed copy" : "English fallback"}
+              <StatusChip
+                tone={
+                  data.publicMessage.via === "reviewed"
+                    ? "clear"
+                    : data.publicMessage.via === "generated"
+                      ? "signal"
+                      : "verify"
+                }
+              >
+                {data.publicMessage.via === "reviewed"
+                  ? "Reviewed copy"
+                  : data.publicMessage.via === "generated"
+                    ? "Machine translated"
+                    : "English fallback"}
               </StatusChip>
             </div>
 
@@ -254,12 +276,25 @@ export function AdvisoryPanel() {
                 <p className="mt-2 text-2xs leading-relaxed text-accent-verify">{speechNote}</p>
               )}
 
-              {!data.publicMessage.reviewed && (
+              {data.publicMessage.via === "generated" && (
+                <p className="mt-4 border-l-2 border-accent-signal pl-3 text-2xs leading-relaxed text-text-tertiary">
+                  No reviewed copy exists in {spec.english} yet, so this is a
+                  machine translation of the reviewed English — produced once
+                  by {data.publicMessage.model ?? "Gemini"} at build time, not
+                  checked by a {spec.english} speaker. The four
+                  corridor languages carry reviewed copy; a state adopting this
+                  would have its own health department sign off the rest before
+                  any of it went out.
+                </p>
+              )}
+              {data.publicMessage.via === "english-fallback" && (
                 <p className="mt-4 border-l-2 border-accent-verify pl-3 text-2xs leading-relaxed text-text-tertiary">
-                  No reviewed copy exists in {spec.english} yet, so the English
-                  text is served rather than a machine translation. Protective
-                  health instruction is not something this system will
-                  auto-translate unreviewed.
+                  No reviewed copy in {spec.english} and no committed machine
+                  translation yet, so the reviewed English is served unchanged
+                  rather than silently leaving a gap. Running
+                  scripts/build-phrasebook.mjs fills this in; it is a build
+                  step so that a language switch never spends the daily model
+                  quota that citizen photo analysis needs.
                 </p>
               )}
             </div>
@@ -317,13 +352,25 @@ export function AdvisoryPanel() {
                 }
               />
               <Row
-                term="Translation"
+                term="Narrative"
                 def={
                   language === "en"
-                    ? "Not required"
-                    : data.provenance.translation.translated
+                    ? "Not translated"
+                    : data.provenance.translation.narrativeVia === "cloud-translation"
                       ? "Cloud Translation · live"
-                      : "No key — English served, not machine-translated"
+                      : data.provenance.translation.narrativeVia === "gemini"
+                        ? "Gemini · machine translation"
+                        : "Untranslated — no path configured"
+                }
+              />
+              <Row
+                term="Public text"
+                def={
+                  data.publicMessage.via === "reviewed"
+                    ? "Reviewed phrasebook"
+                    : data.publicMessage.via === "generated"
+                      ? `${data.publicMessage.model ?? "Gemini"} · built`
+                      : "English, not yet translated"
                 }
               />
               <Row

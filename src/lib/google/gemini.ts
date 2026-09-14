@@ -30,6 +30,14 @@ import {
    should run in a ministry deployment — no key material in the environment.
    On a laptop it is the Gemini API with a key from AI Studio.
 */
+/** Milliseconds to wait before the single rate-limit retry. */
+const RETRY_DELAY_MS = 1500;
+
+function isRateLimited(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes("429") || /RESOURCE_EXHAUSTED|exceeded your current quota/i.test(msg);
+}
+
 function client(): GoogleGenAI | null {
   const backend = geminiBackend();
   if (!backend) return null;
@@ -61,7 +69,23 @@ async function serve<T>(
   }
 
   try {
-    const data = await live(ai, spec.model);
+    let data: T;
+    try {
+      data = await live(ai, spec.model);
+    } catch (first) {
+      /*
+         One retry, only for rate limiting.
+
+         The free tier's per-minute quota is small enough that a visitor
+         clicking through the language picker can exhaust it, and a burst
+         usually clears within a second or two. Retrying anything else would
+         just double the latency before failing — a bad key is still a bad key
+         on the second attempt.
+      */
+      if (!isRateLimited(first)) throw first;
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      data = await live(ai, spec.model);
+    }
     return {
       data,
       mode: "live",
@@ -298,7 +322,87 @@ Sealed attribution certificate: ${input.certificateId}`,
   });
 }
 
-/* ── 3 · Reasoning: the notice that crosses a border ─────────────── */
+/* ── 3 · Translation, when Cloud Translation has no key ──────────── */
+
+const TRANSLATE_SYSTEM = `You translate public health and air quality text for Indian government communication.
+
+Rules:
+1. Translate meaning, not words. The output must read as though it were written by a public health officer who speaks the target language natively, not as a rendering of English syntax.
+2. Keep the register: direct, calm, imperative. These are instructions people act on, not advice they consider.
+3. Do not soften, hedge, expand or add caveats that are not in the source. Do not drop any instruction.
+4. Leave these exactly as they appear: N95, AQI, PM2.5, GRAP, numerals, times and place names.
+5. Use the script the language is normally written in.
+6. Return the same number of strings, in the same order.`;
+
+const TRANSLATE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    texts: { type: Type.ARRAY, items: { type: Type.STRING } },
+  },
+  required: ["texts"],
+};
+
+/**
+ * Translate with Gemini.
+ *
+ * Cloud Translation is the intended path and stays the intended path. This
+ * exists because a deployment can very reasonably have a Gemini key and no
+ * Cloud Translation key — that is exactly this one — and in that situation
+ * serving English to a Gujarati speaker is a worse failure than serving a
+ * machine translation, provided the machine translation is labelled as one.
+ *
+ * The caller is responsible for surfacing that distinction. Nothing here
+ * claims the output is reviewed.
+ */
+export async function translateWithGemini(
+  texts: string[],
+  targetLanguage: string,
+  languageName: string
+): Promise<Served<string[]>> {
+  if (texts.length === 0 || targetLanguage === "en") {
+    return { data: texts, mode: "live", model: "identity", latencyMs: 0 };
+  }
+
+  return serve("gemini-reasoning", texts, async (ai, model) => {
+    const res = await ai.models.generateContent({
+      model,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Translate each string into ${languageName} (${targetLanguage}).
+
+${JSON.stringify(
+                texts,
+                null,
+                2
+              )}`,
+            },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction: TRANSLATE_SYSTEM,
+        responseMimeType: "application/json",
+        responseSchema: TRANSLATE_SCHEMA,
+        temperature: 0.1,
+      },
+    });
+
+    const parsed = parseJson<{ texts: string[] }>(res.text, "translation");
+    /* A translation that lost or gained a line would silently drop an
+       instruction from a health advisory. Refuse it instead. */
+    if (!Array.isArray(parsed.texts) || parsed.texts.length !== texts.length) {
+      throw new Error(
+        `Translation returned ${parsed.texts?.length ?? 0} strings for ${texts.length} inputs`
+      );
+    }
+    return parsed.texts;
+  });
+}
+
+/* ── 4 · Reasoning: the notice that crosses a border ─────────────── */
 
 const ALERT_SCHEMA = {
   type: Type.OBJECT,

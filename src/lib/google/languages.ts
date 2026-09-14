@@ -17,6 +17,8 @@
    ships fourteen translations to a district that needs three.
 */
 
+import { GENERATED_PHRASEBOOK } from "./phrasebook-generated";
+
 export interface LanguageSpec {
   /** BCP-47 code, as Cloud Translation and Text-to-Speech both expect. */
   code: string;
@@ -181,13 +183,40 @@ export const PHRASEBOOK: Record<SeverityBand, Record<string, PublicMessage>> = {
   },
 };
 
-/** The reviewed message, falling back to English when a language is not yet reviewed. */
+export type MessageSource = "reviewed" | "generated" | "english-fallback";
+
+/**
+ * The public-health message for a severity and language.
+ *
+ * Three tiers, in descending order of trust:
+ *
+ *   reviewed         human-checked copy, for the four corridor languages
+ *   generated        committed machine translation from the build script
+ *   english-fallback neither exists, so reviewed English is served as-is
+ *
+ * Deliberately no request-time model call. The Gemini free tier allows twenty
+ * generate requests per day per model, and spending them re-translating eleven
+ * fixed strings starves the one call that cannot be precomputed — reading a
+ * citizen's photograph. Translation is a build step; see
+ * scripts/build-phrasebook.mjs.
+ */
 export function publicMessage(
   severity: SeverityBand,
   lang: string
-): { message: PublicMessage; reviewed: boolean } {
+): { message: PublicMessage; source: MessageSource; model?: string } {
   const band = PHRASEBOOK[severity];
-  const exact = band[lang];
-  if (exact) return { message: exact, reviewed: true };
-  return { message: band.en, reviewed: false };
+
+  const reviewed = band[lang];
+  if (reviewed) return { message: reviewed, source: "reviewed" };
+
+  const generated = GENERATED_PHRASEBOOK[lang]?.[severity];
+  if (generated) {
+    return {
+      message: { headline: generated.headline, instructions: generated.instructions },
+      source: "generated",
+      model: generated.model,
+    };
+  }
+
+  return { message: band.en, source: "english-fallback" };
 }
