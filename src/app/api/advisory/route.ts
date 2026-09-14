@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { draftAdvisory, type AdvisoryInput } from "@/lib/google/gemini";
+import { draftAdvisory, translateWithGemini, type AdvisoryInput } from "@/lib/google/gemini";
 import { translateTexts, synthesizeSpeech } from "@/lib/google/speech";
 import { languageFor, publicMessage, type SeverityBand } from "@/lib/google/languages";
 import { EPISODES } from "@/data/mock-episodes";
+import { memo, contentKey } from "@/lib/google/cache";
 
 /*
    POST /api/advisory — the attribution register becomes something a person acts on.
@@ -67,20 +68,73 @@ export async function POST(request: Request) {
     certificateId: episode.certificateId,
   };
 
-  const drafted = await draftAdvisory(input);
+  /*
+     Cached per episode, not per request. The draft does not depend on the
+     language, so re-drafting it on every language switch spent quota on an
+     identical answer — which is how the free tier was exhausted in six
+     clicks. A fallback is never cached: one rate-limited minute must not
+     freeze recorded output into the page for the next ten.
+  */
+  const draftKey = contentKey("advisory", episode.id, input.upwindSharePct, input.peakAQI);
+  const { value: drafted, hit: draftHit } = await memo(
+    draftKey,
+    () => draftAdvisory(input),
+    (d) => d.mode === "live"
+  );
   const advisory = drafted.data;
 
-  /* The generated narrative is translated; the health instruction is not. */
-  const translated = await translateTexts(
-    [advisory.headline, advisory.body],
-    language
-  );
-
   const severity = advisory.severity as SeverityBand;
-  const { message, reviewed } = publicMessage(severity, language);
+  const { message, source: publicVia, model: publicModel } = publicMessage(severity, language);
 
-  /* What actually gets spoken: the reviewed instruction, never the model's. */
-  const spokenText = [message.headline, ...message.instructions].join(" ");
+  /*
+     Narrative translation only.
+
+     The public-health text is never translated at request time — it comes
+     from the reviewed phrasebook or its committed machine translation, and
+     nothing else. That is a quota decision as much as a safety one: the
+     Gemini free tier allows twenty generate requests per day per model, and
+     re-translating eleven fixed strings on every language switch starves the
+     one call that genuinely cannot be precomputed, which is reading a
+     citizen's photograph.
+
+     The operator narrative does change per episode, so it is translated —
+     by Cloud Translation where a key exists, and otherwise left in English
+     and labelled. Runtime Gemini translation is available behind
+     PRAMANA_RUNTIME_TRANSLATION for a deployment with real quota, and is off
+     by default precisely so a demo cannot spend its photo budget on text.
+  */
+  const cloud = await translateTexts([advisory.headline, advisory.body], language);
+  let headlineLocalised = cloud.data.texts[0] ?? advisory.headline;
+  let bodyLocalised = cloud.data.texts[1] ?? advisory.body;
+  let narrativeVia: "cloud-translation" | "gemini" | "none" =
+    cloud.data.translated ? "cloud-translation" : "none";
+  let translationError: string | null = null;
+
+  const publicMsg = message;
+
+  if (
+    language !== "en" &&
+    !cloud.data.translated &&
+    process.env.PRAMANA_RUNTIME_TRANSLATION === "1"
+  ) {
+    const spec = languageFor(language);
+    const { value: g } = await memo(
+      contentKey("tr", language, advisory.headline, advisory.body),
+      () => translateWithGemini([advisory.headline, advisory.body], language, spec.english),
+      (r) => r.mode === "live"
+    );
+    if (g.mode === "live") {
+      headlineLocalised = g.data[0] ?? headlineLocalised;
+      bodyLocalised = g.data[1] ?? bodyLocalised;
+      narrativeVia = "gemini";
+    } else {
+      translationError = g.fellBackBecause ?? "translation unavailable";
+    }
+  }
+
+  /* What is spoken is the public message in whatever form it reached — the
+     reviewed copy where it exists, otherwise its machine translation. */
+  const spokenText = [publicMsg.headline, ...publicMsg.instructions].join(" ");
   const spoken = body.speak
     ? await synthesizeSpeech(spokenText, lang.ttsLocale)
     : null;
@@ -90,14 +144,20 @@ export async function POST(request: Request) {
     language,
     advisory: {
       ...advisory,
-      headlineLocalised: translated.data.texts[0] ?? advisory.headline,
-      bodyLocalised: translated.data.texts[1] ?? advisory.body,
+      headlineLocalised,
+      bodyLocalised,
     },
     publicMessage: {
-      ...message,
-      reviewed,
-      /* False means the phrasebook has no reviewed copy in this language and
-         English was served. The UI must say so rather than imply coverage. */
+      ...publicMsg,
+      /*
+         How this text reached the reader:
+           reviewed          — from the checked phrasebook
+           gemini            — machine translation of the reviewed English
+           english-fallback  — neither was possible; English was served
+         The UI prints this. Machine translation is never presented as review.
+      */
+      via: publicVia,
+      model: publicModel ?? null,
     },
     speech: spoken
       ? {
@@ -117,10 +177,14 @@ export async function POST(request: Request) {
         fellBackBecause: drafted.fellBackBecause ?? null,
       },
       translation: {
-        mode: translated.mode,
-        model: translated.model,
-        translated: translated.data.translated,
-        fellBackBecause: translated.fellBackBecause ?? null,
+        mode: cloud.mode,
+        model: cloud.model,
+        translated: cloud.data.translated,
+        narrativeVia,
+        publicVia,
+        error: translationError,
+        draftCached: draftHit,
+        fellBackBecause: cloud.fellBackBecause ?? null,
       },
       speech: spoken
         ? { mode: spoken.mode, model: spoken.model, fellBackBecause: spoken.fellBackBecause ?? null }
