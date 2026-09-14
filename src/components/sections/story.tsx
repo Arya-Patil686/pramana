@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Scene, SceneLayer, SceneCopy, MapNote, Stat } from "@/components/illustration/scene";
+import { Scene, SceneCopy, MapNote, Stat } from "@/components/illustration/scene";
 import { CorridorMap } from "@/components/figures/corridor-map";
 import type { Trace } from "@/lib/attribution/engine";
 import type { FireDetection } from "@/lib/sources/firms";
@@ -59,60 +58,11 @@ export function Story({
 
   return (
     <>
-      {/* ── 01 · Opening ────────────────────────────────── */}
-      <Scene paper="var(--color-stain-0)" id="open" className="flex items-center">
-        <SceneLayer depth={0.18} className="opacity-[0.5]">
-          <div className="absolute inset-y-0 right-0 w-[62%]">
-            <CorridorMap
-              detections={detections}
-              wind={wind}
-              show={{ fires: false, places: true, wind: false, traces: false }}
-            />
-          </div>
-        </SceneLayer>
-
-        <div className="relative z-20 mx-auto grid w-full max-w-[1400px] gap-10 px-6 py-24 lg:grid-cols-12 lg:px-10">
-          <div className="lg:col-span-6">
-            <SceneCopy
-              kicker="Source–receptor attribution"
-              headline={
-                <>
-                  Every state already knows how bad its air is.
-                  <br />
-                  None can prove whose it is.
-                </>
-              }
-              body={
-                <>
-                  PRAMĀNA names the upwind cells responsible for a receptor
-                  city&apos;s exceedance, attaches a confidence interval to
-                  every figure, and seals the result in a certificate the named
-                  state can re-run and reproduce. Not a dashboard that displays
-                  pollution — an instrument that settles who owns it.
-                </>
-              }
-            >
-              <div className="mt-10 grid max-w-md grid-cols-3 gap-6">
-                <Stat
-                  value={topSource ? `${topSharePct.toFixed(1)}%` : "—"}
-                  label={topSource ? `${topSource}, top source` : "No transport"}
-                />
-                <Stat value={`${transportHours} h`} label="Transport to receptor" />
-                <Stat value={fireCount.toLocaleString("en-IN")} label="Detections in frame" />
-              </div>
-
-              <div className="mt-10 flex flex-wrap gap-3">
-                <Link href="/console" className="btn-flat bg-[var(--color-ink)] px-6 py-3 text-sm text-[var(--color-stain-0)] hover:bg-[var(--color-ink-soft)]">
-                  Open the console
-                </Link>
-                <Link href="/report" className="btn-flat px-6 py-3 text-sm text-[var(--color-ink)] hover:bg-[var(--color-stain-1)]">
-                  Report the sky where you are
-                </Link>
-              </div>
-            </SceneCopy>
-          </div>
-        </div>
-      </Scene>
+      {/*
+         The opening title card lived here until the interactive model took
+         the top of the page. Repeating the headline underneath it would have
+         read as a stutter, so the narrative now starts at the burning.
+      */}
 
       {/* ── 02 · The burning ────────────────────────────── */}
       <Scene paper="var(--color-stain-1)" id="burning">

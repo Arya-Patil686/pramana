@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Story, type StoryData } from "@/components/sections/story";
 import { AirshedStage } from "@/components/sections/airshed-stage";
+import { InstrumentHero } from "@/components/sections/instrument-hero";
 import { fetchWindField, episodeWindField } from "@/lib/sources/meteo";
 import { fetchFireDetections } from "@/lib/sources/firms";
 import { computeAttribution } from "@/lib/attribution/engine";
@@ -99,6 +100,22 @@ export default async function OverviewPage() {
 
   return (
     <>
+      {/*
+         The interactive model comes first. The scroll-flown volume further
+         down narrates the transport; this one hands the reader the instrument
+         and lets them turn it over and interrogate any source themselves.
+      */}
+      <InstrumentHero
+        detections={fires.detections}
+        wind={episodeSamples}
+        traces={replay.traces}
+        rows={replay.byTehsil}
+        transportHours={replay.peakTransportHours}
+        meanShearDeg={meanShearDeg}
+        topSource={replay.byTehsil[0]?.tehsil ?? null}
+        topSharePct={replay.byTehsil[0]?.contributionPct ?? 0}
+      />
+
       <Story
         data={data}
         airshed={

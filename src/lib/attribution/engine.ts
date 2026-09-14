@@ -89,6 +89,14 @@ export interface TehsilContribution {
   tehsil: string;
   district: string | null;
   state: string | null;
+  /*
+     Load-weighted centroid of the cells that make up this tehsil, so an
+     interactive scene can place a clickable object where the emission
+     actually was rather than at an administrative centre that may sit
+     kilometres from any of it.
+  */
+  lat: number;
+  lng: number;
   contributionPct: number;
   ciLow: number;
   ciHigh: number;
@@ -443,10 +451,17 @@ export function computeAttribution(
     .map(([tehsil, rows]) => {
       const agg = aggregate(rows);
       const arrivals = rows.reduce((s, c) => s + c.arrivals, 0);
+      const wsum = rows.reduce((s, c) => s + c.contributionPct, 0) || 1;
       return {
         tehsil,
         district: rows[0].district,
         state: rows[0].state,
+        lat: Number(
+          (rows.reduce((s, c) => s + c.lat * c.contributionPct, 0) / wsum).toFixed(4)
+        ),
+        lng: Number(
+          (rows.reduce((s, c) => s + c.lng * c.contributionPct, 0) / wsum).toFixed(4)
+        ),
         contributionPct: agg.pct,
         ciLow: agg.low,
         ciHigh: agg.high,
