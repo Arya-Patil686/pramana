@@ -370,7 +370,7 @@ export function ReportComposer() {
           className={cn(
             "group mt-7 inline-flex w-full items-center justify-center gap-2.5 border px-5 py-3 text-sm transition-colors",
             ready
-              ? "border-accent-verify bg-accent-verify/10 text-accent-verify hover:bg-accent-verify/20"
+              ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-stain-0)] hover:bg-[var(--color-ink-soft)]"
               : "cursor-not-allowed border-border-subtle text-text-quaternary"
           )}
         >

@@ -103,12 +103,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <SmoothScroll />
-        <NavBar />
-        <main id="main">
-          {children}
-        </main>
-        <Footer />
+        <SmoothScroll>
+          <NavBar />
+          <main id="main">{children}</main>
+          <Footer />
+        </SmoothScroll>
       </body>
     </html>
   );
