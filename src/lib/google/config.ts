@@ -72,12 +72,23 @@ export function geminiBackend(): GeminiBackend | null {
   return apiKey ? { kind: "gemini-api", apiKey } : null;
 }
 
-/* Model ids are overridable so a team with different quota can retarget
-   without touching call sites. */
+/*
+   Model ids, pinned and overridable.
+
+   Pinned rather than tracking `gemini-flash-latest`, because the attribution
+   certificate records which model produced a figure. An alias that silently
+   moves underneath us would make a sealed certificate unreproducible, which
+   is the one property the whole design exists to protect.
+
+   gemini-2.5-flash was the default until Google retired it for new projects —
+   the API answered with "no longer available to new users, use
+   models/gemini-3.6-flash". The adapter degraded to its recorded fixture and
+   printed that message rather than pretending, which is how it was caught.
+*/
 const GEMINI_VISION_MODEL =
-  process.env.PRAMANA_GEMINI_VISION_MODEL ?? "gemini-2.5-flash";
+  process.env.PRAMANA_GEMINI_VISION_MODEL ?? "gemini-3.6-flash";
 const GEMINI_REASONING_MODEL =
-  process.env.PRAMANA_GEMINI_REASONING_MODEL ?? "gemini-2.5-flash";
+  process.env.PRAMANA_GEMINI_REASONING_MODEL ?? "gemini-3.6-flash";
 
 export const CAPABILITIES: CapabilitySpec[] = [
   {
