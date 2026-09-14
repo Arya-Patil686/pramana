@@ -77,3 +77,65 @@ export function easeOrbit(current: Orbit, goal: Orbit, delta: number, rate = 0.0
     ],
   };
 }
+
+
+/* ── Scripted camera paths ────────────────────────────── */
+
+export interface OrbitKey {
+  /** Scroll progress, 0–1, at which this orbit is reached. */
+  at: number;
+  orbit: Orbit;
+}
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/**
+ * The orbit for a given scroll position, interpolated between keys.
+ *
+ * Lets a scroll-driven sequence and a user-dragged model share one camera
+ * implementation: both produce an Orbit, and the same easing carries the
+ * camera to it. Before this, a separate keyframe camera existed purely
+ * because the scripted scene could not express itself in orbit terms — which
+ * meant two cameras, two sets of framing bugs, and only one of them ever
+ * getting fixed.
+ */
+export function orbitAt(progress: number, keys: OrbitKey[]): Orbit {
+  if (keys.length === 0) throw new Error("orbitAt needs at least one key");
+  const p = clamp(progress, 0, 1);
+
+  let i = 0;
+  while (i < keys.length - 2 && p > keys[i + 1].at) i++;
+  const a = keys[i];
+  const b = keys[Math.min(i + 1, keys.length - 1)];
+  if (a === b || b.at <= a.at) return a.orbit;
+
+  const k = smooth(clamp((p - a.at) / (b.at - a.at), 0, 1));
+  return {
+    /* Shortest path, so a sequence never spins the long way round. */
+    azimuth: a.orbit.azimuth + shortestAngle(a.orbit.azimuth, b.orbit.azimuth) * k,
+    polar: a.orbit.polar + (b.orbit.polar - a.orbit.polar) * k,
+    radius: a.orbit.radius + (b.orbit.radius - a.orbit.radius) * k,
+    target: [
+      a.orbit.target[0] + (b.orbit.target[0] - a.orbit.target[0]) * k,
+      a.orbit.target[1] + (b.orbit.target[1] - a.orbit.target[1]) * k,
+      a.orbit.target[2] + (b.orbit.target[2] - a.orbit.target[2]) * k,
+    ],
+  };
+}
+
+/**
+ * Distance needed to fit `extent` world units across the frame.
+ *
+ * The overview was a hand-picked radius, which is how it ended up framing the
+ * corridor badly: the number was chosen once, against one vertical
+ * exaggeration, and never revisited when that changed. Deriving it from the
+ * data's own extent means the shot cannot drift out of agreement with what it
+ * is supposed to contain.
+ */
+export function fitRadius(extent: number, fovDeg: number, aspect: number, margin = 1.25): number {
+  const vFov = (fovDeg * Math.PI) / 180;
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  /* Fit against the narrower axis, or the scene overflows the other one. */
+  const fov = Math.min(vFov, hFov);
+  return ((extent / 2) / Math.tan(fov / 2)) * margin;
+}
