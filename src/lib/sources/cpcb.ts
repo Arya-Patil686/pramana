@@ -31,9 +31,11 @@ export interface StationReading {
   lng: number;
   /** Pollutant concentrations, µg/m³ (CO in mg/m³). */
   pollutants: Record<string, number>;
-  /** CPCB National AQI: the worst sub-index across pollutants. */
+  /** CPCB National AQI: the worst sub-index across scoreable pollutants. */
   aqi: number | null;
   dominant: string | null;
+  /** Pollutants the station reported that the index could not score. */
+  excluded: string[];
   updatedAt: string;
 }
 
@@ -55,7 +57,21 @@ const BREAKPOINTS: Record<string, [number, number, number, number][]> = {
   pm10: [[0, 50, 0, 50], [50, 100, 51, 100], [100, 250, 101, 200], [250, 350, 201, 300], [350, 430, 301, 400], [430, 600, 401, 500]],
   no2: [[0, 40, 0, 50], [40, 80, 51, 100], [80, 180, 101, 200], [180, 280, 201, 300], [280, 400, 301, 400], [400, 1000, 401, 500]],
   so2: [[0, 40, 0, 50], [40, 80, 51, 100], [80, 380, 101, 200], [380, 800, 201, 300], [800, 1600, 301, 400], [1600, 2400, 401, 500]],
-  co: [[0, 1, 0, 50], [1, 2, 51, 100], [2, 10, 101, 200], [10, 17, 201, 300], [17, 34, 301, 400], [34, 50, 401, 500]],
+  /*
+     CO is deliberately absent.
+
+     CPCB's method needs CO in mg/m³, and the data.gov.in feed reports values
+     between roughly 11 and 73 for it. That is not mg/m³ — 73 mg/m³ of ambient
+     CO would be acutely dangerous, not a Tuesday in Delhi — and it is not
+     µg/m³ either, which would be implausibly low for any urban air. The unit
+     is genuinely ambiguous in the feed.
+
+     Read as mg/m³ it pegged every one of the 124 stations at the 500 cap with
+     CO as the dominant pollutant, which is plainly wrong. Read as µg/m³ it
+     contributes nothing. Rather than pick whichever wrong answer looks
+     better, CO is excluded from the index and the exclusion is reported, so
+     nobody mistakes a six-pollutant index for the full seven.
+  */
   o3: [[0, 50, 0, 50], [50, 100, 51, 100], [100, 168, 101, 200], [168, 208, 201, 300], [208, 748, 301, 400], [748, 1000, 401, 500]],
   nh3: [[0, 200, 0, 50], [200, 400, 51, 100], [400, 800, 101, 200], [800, 1200, 201, 300], [1200, 1800, 301, 400], [1800, 2400, 401, 500]],
 };
@@ -75,17 +91,25 @@ export function subIndex(pollutant: string, value: number): number | null {
 /** CPCB National AQI: the maximum sub-index, and the pollutant that set it. */
 export function nationalAqi(
   pollutants: Record<string, number>
-): { aqi: number | null; dominant: string | null } {
+): { aqi: number | null; dominant: string | null; excluded: string[] } {
   let aqi: number | null = null;
   let dominant: string | null = null;
+  const excluded: string[] = [];
+
   for (const [p, v] of Object.entries(pollutants)) {
+    if (!(p in BREAKPOINTS)) {
+      /* Reported by the station but not scoreable — currently only CO, whose
+         unit the feed does not pin down. Named rather than dropped silently. */
+      excluded.push(p);
+      continue;
+    }
     const si = subIndex(p, v);
     if (si != null && (aqi == null || si > aqi)) {
       aqi = si;
       dominant = p;
     }
   }
-  return { aqi, dominant };
+  return { aqi, dominant, excluded };
 }
 
 const POLLUTANT_KEY: Record<string, string> = {
@@ -165,6 +189,7 @@ export async function fetchCpcbStations(
           pollutants: {} as Record<string, number>,
           aqi: null,
           dominant: null,
+          excluded: [] as string[],
           updatedAt: (r.last_update ?? fetchedAt).trim(),
         };
 
@@ -219,4 +244,7 @@ const RECORDED_STATIONS: StationReading[] = ([
   { stationId: "HR002", station: "Sector 125", city: "Noida", state: "Uttar_Pradesh", lat: 28.5449, lng: 77.3260, pollutants: { pm25: 259.2, pm10: 402.6, no2: 61.7, so2: 14.6, co: 2.5, o3: 18.1 }, updatedAt: "2024-11-03T18:00:00+05:30" },
   { stationId: "PB001", station: "Model Town", city: "Patiala", state: "Punjab", lat: 30.3398, lng: 76.3869, pollutants: { pm25: 168.4, pm10: 271.9, no2: 39.2, so2: 11.3, co: 1.7, o3: 24.6 }, updatedAt: "2024-11-03T18:00:00+05:30" },
   { stationId: "PB002", station: "Punjab Agricultural University", city: "Ludhiana", state: "Punjab", lat: 30.9010, lng: 75.8573, pollutants: { pm25: 186.7, pm10: 294.2, no2: 43.8, so2: 12.7, co: 1.9, o3: 22.3 }, updatedAt: "2024-11-03T18:00:00+05:30" },
-] as Omit<StationReading, "aqi" | "dominant">[]).map((s) => ({ ...s, ...nationalAqi(s.pollutants) }));
+] as Omit<StationReading, "aqi" | "dominant" | "excluded">[]).map((s) => ({
+  ...s,
+  ...nationalAqi(s.pollutants),
+}));
