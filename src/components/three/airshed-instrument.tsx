@@ -9,8 +9,11 @@ import {
   applyDrag,
   applyZoom,
   easeOrbit,
+  fitRadius,
+  orbitAt,
   orbitToPosition,
   type Orbit,
+  type OrbitKey,
 } from "@/lib/orbit";
 import type { TehsilContribution, Trace } from "@/lib/attribution/engine";
 import type { FireDetection } from "@/lib/sources/firms";
@@ -60,30 +63,53 @@ export interface Selection {
    the geometry the moment the geometry changes. */
 export type PresetId = "overview" | "source" | "profile" | "receptor";
 
-export function presets(): Record<PresetId, Orbit> {
+/**
+ * Named viewpoints.
+ *
+ * `extent` is the span the overview has to contain, in world units, measured
+ * from the data. The overview radius used to be a hand-picked 27, chosen once
+ * against a ×25 vertical exaggeration and never revisited when that became
+ * ×45 — which is exactly why it stopped framing the corridor. Deriving it
+ * means the shot cannot drift away from what it is supposed to hold.
+ */
+export function presets(extent = 28.8): Record<PresetId, Orbit> {
   const src = project(30.245, 75.844);
   const rec = project(28.6469, 77.3162);
   const mid: [number, number, number] = [
     (src[0] + rec[0]) / 2,
-    Y_TRANSPORT * 0.5,
+    Y_TRANSPORT * 0.45,
     (src[1] + rec[1]) / 2,
   ];
   /* Azimuth measured so the camera sits back down the corridor. */
   const along = Math.atan2(rec[0] - src[0], rec[1] - src[1]);
 
-  /*
-     Lower and closer than the first pass. At polar 0.72 and radius 34 the
-     camera was almost overhead and far enough out that every vertical feature
-     flattened — which is how a scene with a 45× vertical exaggeration still
-     managed to look like a flat grid.
-  */
+  /* Nominal aspect for the framed model column, which is wider than tall. */
+  const overviewRadius = fitRadius(extent, 42, 1.2, 1.1);
+
   return {
-    overview: { azimuth: along + Math.PI * 0.72, polar: 1.06, radius: 27, target: mid },
-    source: { azimuth: along + Math.PI * 1.05, polar: 1.24, radius: 13, target: [src[0], 1.1, src[1]] },
+    overview: { azimuth: along + Math.PI * 0.72, polar: 1.0, radius: overviewRadius, target: mid },
+    source: { azimuth: along + Math.PI * 1.05, polar: 1.24, radius: 15, target: [src[0], 1.4, src[1]] },
     /* Side-on and low: the only angle at which the two wind layers separate. */
-    profile: { azimuth: along + Math.PI / 2, polar: 1.44, radius: 24, target: mid },
-    receptor: { azimuth: along + Math.PI * 0.88, polar: 1.18, radius: 12, target: [rec[0], 1.4, rec[1]] },
+    profile: { azimuth: along + Math.PI / 2, polar: 1.46, radius: 30, target: mid },
+    receptor: { azimuth: along + Math.PI * 0.88, polar: 1.2, radius: 14, target: [rec[0], Y_TRANSPORT * 0.6, rec[1]] },
   };
+}
+
+/**
+ * The scripted path the scroll stage flies.
+ *
+ * Same four viewpoints, in the order the chapters make their argument:
+ * the sources, what a ground station sees, what is actually carrying the
+ * smoke, and the transport itself.
+ */
+export function scrollPath(extent?: number): OrbitKey[] {
+  const p = presets(extent);
+  return [
+    { at: 0, orbit: p.source },
+    { at: 0.3, orbit: p.profile },
+    { at: 0.62, orbit: { ...p.profile, azimuth: p.profile.azimuth + 0.5, radius: p.profile.radius * 0.86 } },
+    { at: 1, orbit: p.receptor },
+  ];
 }
 
 function projScale(state: RootState): number {
@@ -109,14 +135,29 @@ function projScale(state: RootState): number {
 function OrbitCamera({
   goal,
   start,
+  scroll,
+  path,
 }: {
   goal: React.RefObject<Orbit>;
   start: Orbit;
+  /* When present the camera follows the scripted path at this progress
+     instead of the user's goal. One camera, two drivers. */
+  scroll?: React.RefObject<number>;
+  path?: OrbitKey[];
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   const live = useRef<Orbit>(start);
 
   useFrame((state, delta) => {
+    if (scroll && path) {
+      const target = orbitAt(scroll.current ?? 0, path);
+      live.current = easeOrbit(live.current, target, delta, 0.0008);
+      const sp = orbitToPosition(live.current);
+      state.camera.position.set(sp[0], sp[1], sp[2]);
+      look.set(...live.current.target);
+      state.camera.lookAt(look);
+      return;
+    }
     if (!goal.current) return;
     /* Easing toward the goal gives dragging a little weight and makes a
        preset a flight rather than a cut — one mechanism for both. */
@@ -348,7 +389,7 @@ function FirePoints({ detections }: { detections: FireDetection[] }) {
           uniform float uScale;
           void main() {
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
-            gl_PointSize = aSize * uScale / max(-mv.z, 0.001);
+            gl_PointSize = clamp(aSize * uScale / max(-mv.z, 0.001), 1.0, 30.0);
             gl_Position = projectionMatrix * mv;
           }
         `}
@@ -507,7 +548,10 @@ function Plume({ traces }: { traces: Trace[] }) {
             vJourney = aJourney;
 
             vec4 mv = modelViewMatrix * vec4(pos, 1.0);
-            gl_PointSize = (0.08 + aJourney * 0.22) * uScale / max(-mv.z, 0.001);
+            // Capped. Uncapped, a near camera divides by a tiny depth and
+            // every particle becomes a coin-sized smear — which is exactly
+            // how the scroll scene ended up looking like scattered dirt.
+            gl_PointSize = clamp((0.07 + aJourney * 0.18) * uScale / max(-mv.z, 0.001), 1.0, 26.0);
             gl_Position = projectionMatrix * mv;
           }
         `}
@@ -604,6 +648,52 @@ function TransportPlane() {
     <mesh geometry={geometry}>
       <meshBasicMaterial color={FLOW} transparent opacity={0.055} side={THREE.DoubleSide} depthWrite={false} />
     </mesh>
+  );
+}
+
+/*
+   The boundary-layer ceiling.
+
+   Height at every vertex is the Open-Meteo boundary-layer depth interpolated
+   between corridor samples, so the ceiling genuinely rises and falls along
+   the route. Where it sits below the transport level, smoke above it is
+   decoupled from the ground and travels without being mixed into the city
+   underneath — which is the mechanism the whole corridor depends on.
+*/
+function BoundaryLayer({ samples }: { samples: WindSample[] }) {
+  const geometry = useMemo(() => {
+    const [x0, z0] = project(DOMAIN.latMax, DOMAIN.lngMin);
+    const [x1, z1] = project(DOMAIN.latMin, DOMAIN.lngMax);
+    const g = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(z1 - z0), 36, 36);
+    g.rotateX(-Math.PI / 2);
+    g.translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
+
+    const pos = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      /* Inverse-distance over the corridor samples. */
+      let sw = 0;
+      let sv = 0;
+      for (const s of samples) {
+        const [sx, sz] = project(s.lat, s.lng);
+        const d = Math.max(Math.hypot(x - sx, z - sz), 0.4);
+        const w = 1 / (d * d);
+        sv += w * (s.boundaryLayerM ?? 250);
+        sw += w;
+      }
+      pos.setY(i, altitude(sw === 0 ? 250 : sv / sw));
+    }
+    pos.needsUpdate = true;
+    g.computeVertexNormals();
+    return g;
+  }, [samples]);
+
+  return (
+    <lineSegments>
+      <wireframeGeometry args={[geometry]} />
+      <lineBasicMaterial color={FLOW} transparent opacity={0.075} depthWrite={false} />
+    </lineSegments>
   );
 }
 
@@ -747,6 +837,10 @@ export interface AirshedInstrumentProps {
   onSelect: (s: Selection | null) => void;
   /** DOM nodes for the HTML label overlay, keyed by anchor id. */
   labelNodes: React.RefObject<Map<string, HTMLElement>>;
+  /* Supplying these puts the camera on a scripted path and disables the
+     pointer controls: the same scene, flown instead of held. */
+  scroll?: React.RefObject<number>;
+  path?: OrbitKey[];
   className?: string;
 }
 
@@ -762,6 +856,8 @@ export default function AirshedInstrument({
   selected,
   onSelect,
   labelNodes,
+  scroll,
+  path,
   className,
 }: AirshedInstrumentProps) {
   const [, setHover] = useState<string | null>(null);
@@ -798,10 +894,11 @@ export default function AirshedInstrument({
       {/* Fog set well beyond the domain: pulled in closer it greyed out the
           far half of the corridor, which is the half the argument is about. */}
       <fog attach="fog" args={["#f4f1ea", 52, 120]} />
-      <OrbitCamera goal={goal} start={start} />
-      <Pointer goal={goal} engaged={engaged} onEngage={onEngage} />
+      <OrbitCamera goal={goal} start={start} scroll={scroll} path={path} />
+      {!scroll && <Pointer goal={goal} engaged={engaged} onEngage={onEngage} />}
       <Ground />
       <CorridorBand />
+      <BoundaryLayer samples={wind} />
       <TransportPlane />
       <FirePoints detections={detections} />
       <WindLayers samples={wind} />

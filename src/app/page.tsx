@@ -116,17 +116,22 @@ export default async function OverviewPage() {
         topSharePct={replay.byTehsil[0]?.contributionPct ?? 0}
       />
 
+      {/*
+         The flown volume sits immediately under the hero, so the claim the
+         headline makes is answered by the thing that demonstrates it before
+         the reader meets any prose. The narrative picks up below it.
+      */}
+      <AirshedStage
+        detections={fires.detections}
+        wind={episodeSamples}
+        traces={replay.traces}
+        rows={replay.byTehsil}
+        meanShearDeg={meanShearDeg}
+        windLive={false}
+      />
+
       <Story
         data={data}
-        airshed={
-          <AirshedStage
-            detections={fires.detections}
-            wind={episodeSamples}
-            traces={replay.traces}
-            meanShearDeg={meanShearDeg}
-            windLive={false}
-          />
-        }
       />
 
       {/* ── The instrument ──────────────────────────────── */}

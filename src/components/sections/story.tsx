@@ -39,18 +39,7 @@ export interface StoryData {
 const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 const compass = (deg: number) => COMPASS[Math.round((deg % 360) / 22.5) % 16];
 
-export function Story({
-  data,
-  airshed,
-}: {
-  data: StoryData;
-  /*
-     The 3D stage is injected rather than imported here so this component stays
-     a server-renderable narrative and the WebGL scene keeps its own client
-     boundary and its own mount-on-approach.
-  */
-  airshed?: React.ReactNode;
-}) {
+export function Story({ data }: { data: StoryData }) {
   const {
     detections, wind, traces, windSpeed, bearing, windLive, firesLive,
     fireCount, transportHours, topSource, topSharePct, upwindSharePct, upwindCi,
@@ -145,15 +134,6 @@ export function Story({
           </div>
         </div>
       </Scene>
-
-      {/* ── The airshed in three dimensions ─────────────── */}
-      {/*
-         Placed here on purpose. The reader has just been told that transport
-         happens at 925 hPa and not at the surface, which is a claim about
-         height that the flat map above cannot show. The volume shows it, and
-         then the arrival scene returns to the map for the register.
-      */}
-      {airshed}
 
       {/* ── 04 · The arrival ────────────────────────────── */}
       <Scene paper="var(--color-stain-3)" id="arrival">
