@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type RootState } from "@react-three/fiber";
 import * as THREE from "three";
-import { project, CORRIDOR_NODES } from "@/lib/corridor-geo";
+import { project, CORRIDOR_NODES, DOMAIN, PLACE_ANCHORS } from "@/lib/corridor-geo";
 import { altitude, bearingToVector, mulberry32, Y_TRANSPORT } from "@/lib/airshed-3d";
 import {
   applyDrag,
@@ -15,6 +15,7 @@ import {
 import type { TehsilContribution, Trace } from "@/lib/attribution/engine";
 import type { FireDetection } from "@/lib/sources/firms";
 import type { WindSample } from "@/lib/sources/meteo";
+import { projectLabels, type Anchor } from "@/components/three/label-layer";
 
 /*
    The airshed instrument.
@@ -36,6 +37,10 @@ const INK = "#191c1f";
 const EMBER = "#b8391f";
 const FLOW = "#2b5f68";
 const BRONZE = "#8a6114";
+
+/* Bars top out just under the transport plane, so the tallest source reads
+   against the layer its smoke ends up in rather than poking through it. */
+const COLUMN_MAX_H = Y_TRANSPORT * 0.86;
 
 export interface Selection {
   tehsil: string;
@@ -66,12 +71,18 @@ export function presets(): Record<PresetId, Orbit> {
   /* Azimuth measured so the camera sits back down the corridor. */
   const along = Math.atan2(rec[0] - src[0], rec[1] - src[1]);
 
+  /*
+     Lower and closer than the first pass. At polar 0.72 and radius 34 the
+     camera was almost overhead and far enough out that every vertical feature
+     flattened — which is how a scene with a 45× vertical exaggeration still
+     managed to look like a flat grid.
+  */
   return {
-    overview: { azimuth: along + Math.PI * 0.75, polar: 0.72, radius: 34, target: mid },
-    source: { azimuth: along + Math.PI, polar: 1.16, radius: 15, target: [src[0], 0.6, src[1]] },
+    overview: { azimuth: along + Math.PI * 0.72, polar: 1.06, radius: 27, target: mid },
+    source: { azimuth: along + Math.PI * 1.05, polar: 1.24, radius: 13, target: [src[0], 1.1, src[1]] },
     /* Side-on and low: the only angle at which the two wind layers separate. */
-    profile: { azimuth: along + Math.PI / 2, polar: 1.38, radius: 26, target: mid },
-    receptor: { azimuth: along + Math.PI * 0.9, polar: 1.02, radius: 13, target: [rec[0], 0.8, rec[1]] },
+    profile: { azimuth: along + Math.PI / 2, polar: 1.44, radius: 24, target: mid },
+    receptor: { azimuth: along + Math.PI * 0.88, polar: 1.18, radius: 12, target: [rec[0], 1.4, rec[1]] },
   };
 }
 
@@ -120,30 +131,100 @@ function OrbitCamera({
 
 /* ── Ground ───────────────────────────────────────────── */
 
+/*
+   A bounded ground, not an endless grid.
+
+   The first version drew graticule lines out to the horizon, which gave a
+   viewer nothing to orient against — it read as graph paper floating in
+   space — and implied the model had an opinion about places it was never run
+   over. This is the box the register actually covers: a filled plane, a hard
+   edge, and the 0.1° accumulation grid inside it.
+*/
 function Ground() {
-  const geometry = useMemo(() => {
+  const { fill, grid, edge } = useMemo(() => {
+    const [x0, z0] = project(DOMAIN.latMax, DOMAIN.lngMin);
+    const [x1, z1] = project(DOMAIN.latMin, DOMAIN.lngMax);
+
+    const plane = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(z1 - z0));
+    plane.rotateX(-Math.PI / 2);
+    plane.translate((x0 + x1) / 2, -0.01, (z0 + z1) / 2);
+
     const seg: number[] = [];
-    for (let lat = 28.2; lat <= 31.3; lat += 0.1) {
-      const [, z] = project(lat, 74.6);
-      const [x1] = project(lat, 74.6);
-      const [x2] = project(lat, 77.9);
-      seg.push(x1, 0, z, x2, 0, z);
+    for (let lat = DOMAIN.latMin; lat <= DOMAIN.latMax + 1e-9; lat += 0.1) {
+      const [, z] = project(lat, DOMAIN.lngMin);
+      seg.push(x0, 0, z, x1, 0, z);
     }
-    for (let lng = 74.6; lng <= 77.9; lng += 0.1) {
-      const [x] = project(28.2, lng);
-      const [, z1] = project(28.2, lng);
-      const [, z2] = project(31.3, lng);
-      seg.push(x, 0, z1, x, 0, z2);
+    for (let lng = DOMAIN.lngMin; lng <= DOMAIN.lngMax + 1e-9; lng += 0.1) {
+      const [x] = project(DOMAIN.latMin, lng);
+      seg.push(x, 0, z0, x, 0, z1);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(seg), 3));
+
+    const border = new THREE.BufferGeometry();
+    border.setAttribute(
+      "position",
+      new THREE.BufferAttribute(
+        new Float32Array([x0, 0, z0, x1, 0, z0, x1, 0, z1, x0, 0, z1, x0, 0, z0]),
+        3
+      )
+    );
+
+    return { fill: plane, grid: g, edge: border };
+  }, []);
+
+  return (
+    <>
+      <mesh geometry={fill}>
+        <meshBasicMaterial color="#e9e2d2" />
+      </mesh>
+      <lineSegments geometry={grid}>
+        <lineBasicMaterial color={INK} transparent opacity={0.09} />
+      </lineSegments>
+      <line>
+        <primitive object={edge} attach="geometry" />
+        <lineBasicMaterial color={INK} transparent opacity={0.45} />
+      </line>
+    </>
+  );
+}
+
+/*
+   The transport corridor, drawn on the ground.
+
+   A translucent band from the source region to the receptor. Without it the
+   columns and the city are just objects scattered on a plane, and the single
+   most important fact — that these sources feed that city — has to be
+   inferred from the plume alone.
+*/
+function CorridorBand() {
+  const geometry = useMemo(() => {
+    const src = project(30.3, 75.6);
+    const rec = project(28.6469, 77.3162);
+    const dx = rec[0] - src[0];
+    const dz = rec[1] - src[1];
+    const len = Math.hypot(dx, dz) || 1;
+    /* Perpendicular, scaled to the corridor's real observed width. */
+    const px = (-dz / len) * 3.4;
+    const pz = (dx / len) * 3.4;
+
+    const verts = new Float32Array([
+      src[0] + px, 0, src[1] + pz,
+      src[0] - px, 0, src[1] - pz,
+      rec[0] - px * 0.45, 0, rec[1] - pz * 0.45,
+      src[0] + px, 0, src[1] + pz,
+      rec[0] - px * 0.45, 0, rec[1] - pz * 0.45,
+      rec[0] + px * 0.45, 0, rec[1] + pz * 0.45,
+    ]);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(verts, 3));
     return g;
   }, []);
 
   return (
-    <lineSegments geometry={geometry}>
-      <lineBasicMaterial color={INK} transparent opacity={0.12} />
-    </lineSegments>
+    <mesh geometry={geometry} position={[0, 0.005, 0]}>
+      <meshBasicMaterial color={FLOW} transparent opacity={0.09} side={THREE.DoubleSide} />
+    </mesh>
   );
 }
 
@@ -166,60 +247,60 @@ function SourceColumns({
     <group>
       {rows.map((r) => {
         const [x, z] = project(r.lat, r.lng);
-        /* Height is the share of the register, normalised so the leading
-           source reaches the transport level and the rest read against it. */
-        const h = Math.max(0.12, (r.contributionPct / maxPct) * Y_TRANSPORT * 1.15);
+        /*
+           Height is the share of the register. The floor is 8% of the tallest
+           rather than a fixed minimum, so a 1% source is visibly a stub next
+           to a 39% one instead of both rounding to the same crate — but it
+           still has enough body to be seen and hit.
+        */
+        const t = r.contributionPct / maxPct;
+        const h = COLUMN_MAX_H * (0.08 + 0.92 * t);
         const isSel = selected === r.tehsil;
+
+        const handlers = {
+          onClick: (e: { stopPropagation: () => void }) => {
+            e.stopPropagation();
+            onSelect(r);
+          },
+          onPointerOver: (e: { stopPropagation: () => void }) => {
+            e.stopPropagation();
+            onHover(r.tehsil);
+            document.body.style.cursor = "pointer";
+          },
+          onPointerOut: () => {
+            onHover(null);
+            document.body.style.cursor = "";
+          },
+        };
+
         return (
           <group key={r.tehsil} position={[x, 0, z]}>
-            <mesh
-              position={[0, h / 2, 0]}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(r);
-              }}
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                onHover(r.tehsil);
-                document.body.style.cursor = "pointer";
-              }}
-              onPointerOut={() => {
-                onHover(null);
-                document.body.style.cursor = "";
-              }}
-            >
-              <boxGeometry args={[0.42, h, 0.42]} />
-              <meshBasicMaterial
-                color={isSel ? EMBER : BRONZE}
-                transparent
-                opacity={isSel ? 0.92 : 0.55}
-              />
+            {/* The bar. Slim, so nine of them do not merge into a wall. */}
+            <mesh position={[0, h / 2, 0]} {...handlers}>
+              <boxGeometry args={[0.34, h, 0.34]} />
+              <meshBasicMaterial color={isSel ? EMBER : BRONZE} transparent opacity={isSel ? 0.95 : 0.72} />
             </mesh>
-            {/* A wider invisible target: a 0.42-unit column is a hard thing to
-                hit on a phone, and a missed tap reads as a broken control. */}
-            <mesh
-              position={[0, h / 2, 0]}
-              visible={false}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect(r);
-              }}
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                onHover(r.tehsil);
-                document.body.style.cursor = "pointer";
-              }}
-              onPointerOut={() => {
-                onHover(null);
-                document.body.style.cursor = "";
-              }}
-            >
-              <boxGeometry args={[1.5, Math.max(h, 1.2), 1.5]} />
+            {/* A cap, so the top of the bar is a definite thing the eye can
+                measure against the transport plane behind it. */}
+            <mesh position={[0, h, 0]} {...handlers}>
+              <boxGeometry args={[0.52, 0.07, 0.52]} />
+              <meshBasicMaterial color={isSel ? EMBER : INK} transparent opacity={isSel ? 1 : 0.5} />
             </mesh>
-            {/* Base tick, so a near-zero contributor is still locatable. */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-              <ringGeometry args={[0.3, 0.4, 24]} />
-              <meshBasicMaterial color={isSel ? EMBER : INK} transparent opacity={isSel ? 0.8 : 0.28} />
+            {/* A dropline to the ground keeps tall bars anchored when the
+                camera is low and the base is hidden behind nearer geometry. */}
+            <mesh position={[0, h / 2, 0]}>
+              <boxGeometry args={[0.012, h, 0.012]} />
+              <meshBasicMaterial color={INK} transparent opacity={0.35} />
+            </mesh>
+            {/* Base ring. */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
+              <ringGeometry args={[0.26, 0.36, 28]} />
+              <meshBasicMaterial color={isSel ? EMBER : INK} transparent opacity={isSel ? 0.85 : 0.32} />
+            </mesh>
+            {/* A wide invisible target: a 0.34-unit bar is hard to hit on a
+                phone, and a missed tap reads as a broken control. */}
+            <mesh position={[0, h / 2, 0]} visible={false} {...handlers}>
+              <boxGeometry args={[1.6, Math.max(h, 1.4), 1.6]} />
             </mesh>
           </group>
         );
@@ -459,14 +540,15 @@ function Receptor({ onSelect }: { onSelect: () => void }) {
   useFrame((state) => {
     const m = ring.current;
     if (!m) return;
-    const beat = (state.clock.elapsedTime * 0.45) % 1;
-    const s = 0.7 + beat * 2.1;
+    const beat = (state.clock.elapsedTime * 0.4) % 1;
+    const s = 0.9 + beat * 2.6;
     m.scale.set(s, s, s);
-    (m.material as THREE.MeshBasicMaterial).opacity = (1 - beat) * 0.55;
+    (m.material as THREE.MeshBasicMaterial).opacity = (1 - beat) * 0.6;
   });
 
   return (
     <group position={[x, 0, z]}>
+      {/* Footprint. */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.02, 0]}
@@ -477,19 +559,98 @@ function Receptor({ onSelect }: { onSelect: () => void }) {
         onPointerOver={() => (document.body.style.cursor = "pointer")}
         onPointerOut={() => (document.body.style.cursor = "")}
       >
-        <circleGeometry args={[0.9, 40]} />
-        <meshBasicMaterial color={EMBER} transparent opacity={0.14} />
+        <circleGeometry args={[1.15, 48]} />
+        <meshBasicMaterial color={EMBER} transparent opacity={0.16} />
       </mesh>
+      {/* The pulse every operations display uses for a threshold crossing. */}
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <ringGeometry args={[0.72, 0.84, 48]} />
+        <ringGeometry args={[0.9, 1.02, 56]} />
         <meshBasicMaterial color={EMBER} transparent opacity={0.5} depthWrite={false} />
       </mesh>
-      <mesh position={[0, Y_TRANSPORT / 2, 0]}>
-        <boxGeometry args={[0.16, Y_TRANSPORT, 0.16]} />
-        <meshBasicMaterial color={EMBER} transparent opacity={0.3} />
+      {/* A mast to the transport level, so the city is findable from any
+          angle. The receptor being invisible was the single worst legibility
+          failure of the first version. */}
+      <mesh position={[0, Y_TRANSPORT * 0.62, 0]}>
+        <boxGeometry args={[0.11, Y_TRANSPORT * 1.24, 0.11]} />
+        <meshBasicMaterial color={EMBER} transparent opacity={0.8} />
+      </mesh>
+      <mesh position={[0, Y_TRANSPORT * 1.24, 0]}>
+        <octahedronGeometry args={[0.3]} />
+        <meshBasicMaterial color={EMBER} />
       </mesh>
     </group>
   );
+}
+
+/*
+   The transport plane.
+
+   A translucent sheet at 925 hPa. It gives the plume something to visibly
+   ride and gives every column a common reference to be measured against —
+   without it, "the smoke travels at height" is a claim the scene asserts
+   rather than shows.
+*/
+function TransportPlane() {
+  const geometry = useMemo(() => {
+    const [x0, z0] = project(DOMAIN.latMax, DOMAIN.lngMin);
+    const [x1, z1] = project(DOMAIN.latMin, DOMAIN.lngMax);
+    const g = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(z1 - z0));
+    g.rotateX(-Math.PI / 2);
+    g.translate((x0 + x1) / 2, Y_TRANSPORT, (z0 + z1) / 2);
+    return g;
+  }, []);
+
+  return (
+    <mesh geometry={geometry}>
+      <meshBasicMaterial color={FLOW} transparent opacity={0.055} side={THREE.DoubleSide} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/* ── Labels ───────────────────────────────────────────── */
+
+/*
+   Anchors are computed here, in the scene, and written to DOM nodes the
+   parent renders in an overlay. One loop, crisp type, no font meshes.
+*/
+function Labels({
+  rows,
+  nodes,
+}: {
+  rows: TehsilContribution[];
+  nodes: React.RefObject<Map<string, HTMLElement>>;
+}) {
+  const maxPct = Math.max(1, ...rows.map((r) => r.contributionPct));
+
+  const anchors = useMemo<Anchor[]>(() => {
+    const out: Anchor[] = [];
+    for (const p of PLACE_ANCHORS) {
+      const [x, z] = project(p.lat, p.lng);
+      out.push({
+        id: `place:${p.label}`,
+        position: [x, p.kind === "receptor" ? Y_TRANSPORT * 1.24 : 0.1, z],
+        offset: [0, p.kind === "receptor" ? -26 : 0],
+      });
+    }
+    for (const r of rows) {
+      const [x, z] = project(r.lat, r.lng);
+      const h = COLUMN_MAX_H * (0.08 + 0.92 * (r.contributionPct / maxPct));
+      out.push({ id: `src:${r.tehsil}`, position: [x, h, z], offset: [0, -16] });
+    }
+    /* The two wind layers name themselves where they are, which is the only
+       way a viewer can tell which set of arrows is which. */
+    const [wx, wz] = project(29.95, 76.3);
+    out.push({ id: "layer:surface", position: [wx, altitude(60), wz], offset: [0, -12] });
+    out.push({ id: "layer:transport", position: [wx, Y_TRANSPORT, wz], offset: [0, -12] });
+    return out;
+  }, [rows, maxPct]);
+
+  useFrame((state) => {
+    if (!nodes.current) return;
+    projectLabels(anchors, nodes.current, state.camera, state.size.width, state.size.height);
+  });
+
+  return null;
 }
 
 /* ── Pointer handling ─────────────────────────────────── */
@@ -584,6 +745,8 @@ export interface AirshedInstrumentProps {
   onEngage: () => void;
   selected: string | null;
   onSelect: (s: Selection | null) => void;
+  /** DOM nodes for the HTML label overlay, keyed by anchor id. */
+  labelNodes: React.RefObject<Map<string, HTMLElement>>;
   className?: string;
 }
 
@@ -598,6 +761,7 @@ export default function AirshedInstrument({
   onEngage,
   selected,
   onSelect,
+  labelNodes,
   className,
 }: AirshedInstrumentProps) {
   const [, setHover] = useState<string | null>(null);
@@ -631,15 +795,20 @@ export default function AirshedInstrument({
          inspector-style interface does and what a visitor will try. */
       onPointerMissed={() => onSelect(null)}
     >
-      <fog attach="fog" args={["#f4f1ea", 34, 86]} />
+      {/* Fog set well beyond the domain: pulled in closer it greyed out the
+          far half of the corridor, which is the half the argument is about. */}
+      <fog attach="fog" args={["#f4f1ea", 52, 120]} />
       <OrbitCamera goal={goal} start={start} />
       <Pointer goal={goal} engaged={engaged} onEngage={onEngage} />
       <Ground />
+      <CorridorBand />
+      <TransportPlane />
       <FirePoints detections={detections} />
       <WindLayers samples={wind} />
       <Plume traces={traces} />
       <SourceColumns rows={rows} selected={selected} onSelect={pick} onHover={setHover} />
       <Receptor onSelect={() => onSelect(null)} />
+      <Labels rows={rows} nodes={labelNodes} />
     </Canvas>
   );
 }

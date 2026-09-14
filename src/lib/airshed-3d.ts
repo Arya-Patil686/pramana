@@ -20,7 +20,7 @@ export const UNITS_PER_KM = 0.1;
  * corridor. Standard practice in atmospheric visualisation, and dishonest only
  * if it is not declared: the scene labels it on screen.
  */
-export const VERTICAL_EXAGGERATION = 25;
+export const VERTICAL_EXAGGERATION = 45;
 
 /** Metres above ground to world units. */
 export function altitude(metres: number): number {

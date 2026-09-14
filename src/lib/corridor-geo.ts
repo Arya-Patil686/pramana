@@ -107,3 +107,35 @@ export function attributionGrid(
 
   return new Float32Array(segments);
 }
+
+
+/**
+ * The analysis domain.
+ *
+ * The 3D scenes draw a bounded ground rather than an endless graticule. An
+ * unbounded grid gives a viewer nothing to orient against — it reads as
+ * graph paper floating in space — and it also implies the model has an
+ * opinion about places it was never run over. This is the box the register
+ * actually covers.
+ */
+export const DOMAIN = {
+  latMin: 28.2,
+  latMax: 31.3,
+  lngMin: 74.6,
+  lngMax: 77.9,
+} as const;
+
+/** Labelled anchors the scenes attach place names to. */
+export interface PlaceAnchor {
+  label: string;
+  sub?: string;
+  lat: number;
+  lng: number;
+  kind: "region" | "receptor";
+}
+
+export const PLACE_ANCHORS: PlaceAnchor[] = [
+  { label: "PUNJAB", sub: "source region", lat: 30.62, lng: 75.35, kind: "region" },
+  { label: "HARYANA", sub: "transit", lat: 29.55, lng: 76.45, kind: "region" },
+  { label: "DELHI", sub: "receptor", lat: 28.6469, lng: 77.3162, kind: "receptor" },
+];
