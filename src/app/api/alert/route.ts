@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { draftAuthorityAlert, type AdvisoryInput } from "@/lib/google/gemini";
-import { EPISODES } from "@/data/mock-episodes";
+import { draftAuthorityAlert } from "@/lib/google/gemini";
+import { runEpisode } from "@/lib/pipeline/episode";
 
 /*
    POST /api/alert — draft the notice that crosses a state border.
@@ -17,40 +17,23 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  let episodeId: string | undefined;
+  let mode: string | undefined;
   try {
-    ({ episodeId } = (await request.json()) as { episodeId?: string });
+    ({ mode } = (await request.json()) as { mode?: string });
   } catch {
-    /* Default to the headline episode. */
+    /* Default to the episode replay. */
   }
 
-  const episode = EPISODES.find((e) => e.id === episodeId) ?? EPISODES[0];
-  const upwind = episode.attribution.filter((a) => a.state !== "Delhi");
-  const upwindSharePct = upwind.reduce((sum, a) => sum + a.contribution, 0);
-
-  const input: AdvisoryInput = {
-    receptorCity: "Delhi",
-    peakAQI: episode.peakAQI,
-    peakWindow: "02:00–06:00 IST",
-    grapStage: episode.grapStage,
-    upwindSharePct,
-    confidenceInterval: [
-      upwind.reduce((sum, a) => sum + a.confidenceLow, 0),
-      Math.min(100, upwind.reduce((sum, a) => sum + a.confidenceHigh, 0)),
-    ],
-    topSources: [...upwind]
-      .sort((a, b) => b.contribution - a.contribution)
-      .slice(0, 3)
-      .map((a) => ({ name: a.tehsil, state: a.state, contributionPct: a.contribution })),
-    leadTimeHours: episode.leadTimeHours,
-    transportHours: 40,
-    certificateId: episode.certificateId,
-  };
+  /* Same pipeline run as the advisory and the certificate, so the notice
+     names the figures the certificate actually seals. */
+  const run = await runEpisode(mode === "live" ? "live" : "episode");
+  const input = run.advisoryInput;
 
   const drafted = await draftAuthorityAlert(input);
 
   return NextResponse.json({
-    episodeId: episode.id,
+    episodeId: run.certificate.episodeId,
+    certificateId: run.certificate.id,
     alert: drafted.data,
     /* Stated in the payload so no client can present this as sent. */
     dispatched: false,
