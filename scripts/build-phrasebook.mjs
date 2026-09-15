@@ -101,7 +101,11 @@ const SCHEMA = {
    exhausts one can finish on the next rather than leaving a half-built file. */
 const MODELS = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.8-flash"];
 
-const ai = new GoogleGenAI({ apiKey });
+/* A per-request timeout. Without one, a call the API never answers waits on
+   undici's five-minute header timeout — which stalled one run and killed
+   another. Sixty seconds is ample for eleven short strings; a call that has
+   not answered by then is treated as transient and retried or skipped. */
+const ai = new GoogleGenAI({ apiKey, httpOptions: { timeout: 60_000 } });
 
 async function translate(texts, code, name) {
   let lastError;
@@ -132,7 +136,12 @@ async function translate(texts, code, name) {
       lastError = e;
       const msg = e instanceof Error ? e.message : String(e);
       const quota = /429|RESOURCE_EXHAUSTED|quota/i.test(msg);
-      const busy = /503|UNAVAILABLE|high demand|overloaded/i.test(msg);
+      /* Network failures are transient too. A HeadersTimeoutError killed the
+         first full run on its sixth language, and because it was not
+         recognised it was rethrown and took the whole run down with it. */
+      const busy = /503|UNAVAILABLE|high demand|overloaded|fetch failed|timeout|ECONNRESET|ETIMEDOUT|socket hang up/i.test(
+        msg + " " + String(e?.cause?.code ?? e?.cause?.name ?? "")
+      );
       /* Quota is permanent for the day, so move to the next model. A 503 is
          temporary, so wait and try the same model again before moving on —
          skipping straight past it would burn the fallback list on a blip. */
@@ -161,20 +170,48 @@ async function translate(texts, code, name) {
   throw lastError;
 }
 
-const out = {};
+/*
+   Resumable. The first full run died on its sixth language and, because the
+   file was only written at the end, threw away five languages of finished
+   work and the quota that paid for it. Now the existing file is read first,
+   complete languages are skipped, and the file is rewritten after each
+   language finishes.
+*/
+function readExisting() {
+  try {
+    const src = readFileSync(OUT, "utf8");
+    const at = src.indexOf("> = ");
+    if (at === -1) return {};
+    return JSON.parse(src.slice(at + 4).trim().replace(/;$/, ""));
+  } catch {
+    return {};
+  }
+}
+
+const BANDS = Object.keys(SOURCE);
+const out = readExisting();
+
 for (const [code, name] of TARGETS) {
   if (REVIEWED.has(code)) continue;
+  const have = out[code] ?? {};
+  if (BANDS.every((b) => have[b])) {
+    console.log(`  ${name} (${code}) — already generated, skipping`);
+    continue;
+  }
   console.log(`  ${name} (${code})`);
-  out[code] = {};
+  out[code] = have;
   for (const [band, msg] of Object.entries(SOURCE)) {
+    if (have[band]) continue;
     const source = [msg.headline, ...msg.instructions];
     const { texts, model } = await translate(source, code, name);
     out[code][band] = { headline: texts[0], instructions: texts.slice(1), model };
     console.log(`    ${band}: ${texts[0].slice(0, 46)}`);
   }
+  writeFileSync(OUT, render(out));
 }
 
-const body = `/*
+function render(data) {
+  return `/*
    GENERATED FILE — do not edit by hand.
    Produced by scripts/build-phrasebook.mjs on ${new Date().toISOString().slice(0, 10)}.
 
@@ -201,9 +238,10 @@ export interface GeneratedEntry extends PublicMessage {
 export const GENERATED_PHRASEBOOK: Record<
   string,
   Partial<Record<SeverityBand, GeneratedEntry>>
-> = ${JSON.stringify(out, null, 2)};
+> = ${JSON.stringify(data, null, 2)};
 `;
+}
 
-writeFileSync(OUT, body);
+writeFileSync(OUT, render(out));
 console.log(`\nwrote ${OUT}`);
 console.log(`languages: ${Object.keys(out).length}`);
