@@ -41,7 +41,7 @@ is actually keyed on the running deployment.
 |---|---|---|
 | `GEMINI_API_KEY` | Photo analysis, advisory and alert drafting | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | `GOOGLE_CLOUD_PROJECT` | Routes the same Gemini calls through **Vertex AI** instead | Any GCP project with Vertex enabled |
-| `GOOGLE_MAPS_API_KEY` | Air Quality API readings, reverse geocoding to tehsil | Maps Platform console |
+| `GOOGLE_MAPS_API_KEY` | Air Quality API, reverse geocoding — **optional, not used on the demo deployment** | Maps Platform console (needs an active billing account) |
 | `GOOGLE_TRANSLATE_API_KEY` | Cloud Translation | GCP console |
 | `GOOGLE_TTS_API_KEY` | Cloud Text-to-Speech | GCP console |
 | `GOOGLE_STT_API_KEY` | Cloud Speech-to-Text | GCP console |
@@ -50,61 +50,91 @@ is actually keyed on the running deployment.
 
 `GOOGLE_API_KEY` stands in for any unset `GOOGLE_*` variable.
 
-### Deploy to Cloud Run
+**Free-tier limits matter for a demo.** The Gemini free tier allows **20
+generate requests per day, per model**. Two things keep the demo inside that:
+
+- Nothing that can be precomputed calls a model at request time. The public
+  health messages in all twelve languages are committed text
+  (`src/lib/google/languages.ts` for the reviewed four,
+  `src/lib/google/phrasebook-generated.ts` for the other eight), so switching
+  language costs nothing.
+- Live Gemini calls fall through a chain of models
+  (`gemini-3.6-flash → 3.7 → 3.5 → 3.8`, overridable with
+  `PRAMANA_GEMINI_FALLBACK_MODELS`) when one is out of quota or overloaded, and
+  record which model actually answered.
+
+Spend the daily budget on the photo analysis in `/report`. Do a dry run the day
+before recording, not the morning of.
+
+### Deploy — Vercel (the live demo link)
+
+1. Push the repository to GitHub, then import it at
+   [vercel.com/new](https://vercel.com/new). The framework is detected
+   automatically; no build settings need changing.
+2. In **Settings → Environment Variables**, add `GEMINI_API_KEY`,
+   `DATA_GOV_IN_API_KEY` and `FIRMS_MAP_KEY` (the same values as your
+   `.env.local`). Add them for Production and Preview.
+3. Deploy. `/integration` on the deployed URL reports which capabilities are
+   live there.
+
+Vercel supplies `VERCEL_GIT_COMMIT_SHA`, which the certificate page records as
+the model commit, so every sealed certificate names the exact code that produced
+it.
+
+### Deploy — Cloud Run (the ministry form)
 
 ```bash
 gcloud run deploy pramana --source . --region asia-south1 --allow-unauthenticated --set-env-vars GOOGLE_CLOUD_PROJECT=$(gcloud config get-value project)
 ```
 
-Setting `GOOGLE_CLOUD_PROJECT` makes every Gemini call authenticate as the
-runtime service account through Vertex AI, so **no key material lives in the
-environment** — which is the only form a ministry deployment can take. Put the
-remaining keys in Secret Manager and mount them with `--set-secrets`.
+The `Dockerfile` builds the standalone output. With `GOOGLE_CLOUD_PROJECT` set,
+Gemini calls authenticate as the runtime service account through Vertex AI, so
+no key material lives in the environment — the only form a government
+deployment can take. This path needs a GCP project with active billing, which
+is why the demo link is served from Vercel.
 
 ---
 
 ## What to demo
 
-A 3–5 minute walkthrough that shows the system working, in this order.
+A 3–5 minute walkthrough, in this order. Figures below are described rather
+than quoted, because with live fire detections they change from day to day —
+which is itself worth saying on camera.
 
-**1 · The story — `/`  (45s)**
-Scroll the five pages. The paper stains down the CPCB index as the smoke
-arrives, and the same map is revealed one layer at a time: detections, then the
-925 hPa wind field, then the transport trajectories. Say out loud that the
-numbers in the copy are computed, not written.
+**1 · The model — `/`  (45s)**
+Drag the interactive airshed. Click the tallest source column: the inspector
+shows that tehsil's actual register row — share, 95% interval, arriving puffs,
+transport time. Press **Profile** to show the surface wind and the 925 hPa wind
+pointing in different directions. Scroll into the flown volume beneath it.
 
 **2 · The register — `/console`  (75s)**
-This is the centrepiece. Land on `?mode=episode`: the model reports **Sangrur
-as the largest single source of Delhi's biomass load, 38.8%**, with the
-interval, the arrival curve, and the model's own limitations printed beside its
-numbers.
-
-Then switch to **`?mode=live`**. Same code path, one input changed, and it now
-says *"the corridor is barely open — only 3 of 15 fires reach Delhi on this
-field."* Because in September the 925 hPa flow over Punjab does not run toward
-Delhi. **This contrast is the strongest thing in the demo**: it shows the system
-is computing rather than replaying, and that it will say so when there is
-nothing to report.
+Start on `?mode=episode` (the recorded 3 November wind field): the leading
+source, its interval, the arrival curve, and the model's limitations printed
+beside its numbers. Then switch to **`?mode=live`**: same code, one input
+changed, and it reports how little of today's burning actually reaches Delhi,
+because the September 925 hPa flow does not run that way. **This contrast is
+the strongest moment in the demo** — the system computes rather than replays,
+and says so when there is nothing to report.
 
 **3 · Citizen observation — `/report`  (60s)**
-Upload a photo of the sky. Gemini multimodal returns a *band* rather than a
-number, lists what could make the reading wrong, and the register gives one
-lone report at most 0.35 of the model's own confidence. Explain the
-corroboration rule: weight comes from independent agreement in the same tehsil,
-which is what stops one motivated person moving a finding a state is answerable
-for.
+Upload a real photo of the sky, taken with a phone. Gemini returns a band
+rather than a number, lists what could make the reading wrong, and one lone
+report is capped at 0.35 of the model's confidence until neighbours in the same
+tehsil corroborate it. Worth showing: upload a screenshot or a graphic and
+Gemini refuses it as not a photograph.
 
-**4 · Advisory and voice — `/advisory`  (45s)**
-Switch language to ਪੰਜਾਬੀ and press *Read aloud*. Point out the split: Gemini
-writes the situational narrative, but the protective health instruction comes
-from a reviewed phrasebook, because a model improvising medical advice in a
-language nobody on the team reads is not a risk worth taking.
+**4 · Advisory — `/advisory`  (45s)**
+The receptor figure is the worst live CPCB station in Delhi. Switch through
+ਪੰਜਾਬੀ, हिन्दी, ગુજરાતી, தமிழ் — point out the label on each: *Reviewed copy* for
+the corridor languages, *Machine translated* for the rest. Press *Read aloud*.
+Scroll to the cross-border notice: same certificate id as the advisory, and
+marked not dispatched, because sending it is an officer's decision.
 
 **5 · The proof — `/certificate` and `/integration`  (30s)**
-Show the Merkle verification running in the browser over real SHA-256 digests.
-Finish on `/integration`, which states which Google service does which job and
-whether it is keyed — so the integration claim is checkable rather than
-asserted.
+Press **Run verification**. The browser recomputes the Merkle root from the
+leaves — each carrying the SHA-256 of the data the pipeline actually fetched —
+and it matches the sealed root. Finish on `/integration`, which states which
+Google service does which job and whether it is live on this deployment.
 
 ---
 
@@ -155,25 +185,31 @@ live from the running deployment.
 
 | Category | Listed | Status |
 |---|---|---|
-| **Generative AI** | Gemini API | ✅ vision + structured reasoning, `lib/google/gemini.ts` |
+| **Generative AI** | Gemini API | ✅ **live** — photo analysis, advisory and notice drafting, `lib/google/gemini.ts` |
 | | Google AI Studio | ✅ key source for the Gemini API path |
-| | Vertex AI | ✅ same adapters route through Vertex when `GOOGLE_CLOUD_PROJECT` is set |
+| | Vertex AI | ⚠️ wired — the same adapters route through Vertex when `GOOGLE_CLOUD_PROJECT` is set — not active on the demo deployment (needs billing) |
 | **Predictive modelling** | Vertex AI (AutoML, custom training) | ❌ **not used** — see below |
-| **Vision & multimodal** | Gemini multimodal | ✅ citizen sky-photo analysis |
+| **Vision & multimodal** | Gemini multimodal | ✅ **live** — citizen sky-photo analysis, refuses non-photographs |
 | | Vertex AI Vision | ❌ Gemini multimodal covers this use case |
-| **Language & voice** | Cloud Speech-to-Text | ✅ spoken citizen reports |
-| | Cloud Text-to-Speech | ✅ spoken advisories, 12 languages |
-| | Translation API | ✅ advisory narrative |
+| **Language & voice** | Cloud Text-to-Speech | ⚠️ wired, not keyed on the demo deployment; the browser's own speech synthesis reads the same text |
+| | Cloud Speech-to-Text | ⚠️ wired, not keyed; the browser's speech recognition accepts spoken reports |
+| | Translation API | ⚠️ wired, not keyed; public messages are committed in 12 languages instead |
 | | Dialogflow | ❌ no conversational surface in scope |
-| **Geospatial** | Google Maps Platform | ✅ Air Quality API + Geocoding |
+| **Geospatial** | Google Maps Platform | ❌ **not used on the demo** — it needs active billing, and CPCB supersedes its receptor reading |
 | | Google Earth Engine | ❌ **not used** — see below |
-| **Data & backend** | Cloud Run | ✅ `Dockerfile`, standalone output, Vertex via service account |
+| **Data & backend** | Cloud Run | ⚠️ `Dockerfile` ready; the demo link is served from Vercel |
 | | BigQuery | ❌ no national-scale archive yet |
 | | Firebase | ❌ the citizen register is in-process; Firestore is the stated target |
-| **Public data** | data.gov.in | ✅ CPCB CAAQMS reference network |
+| **Public data** | data.gov.in | ✅ **live** — CPCB CAAQMS reference network |
 | | IMD / national met | ⚠️ Open-Meteo serves ECMWF IFS and GFS; IMD has no comparable public API |
 | | ISRO / Bhuvan | ❌ NASA FIRMS VIIRS at 375 m is the better product for this task |
 | | FAO / WHO | ❌ agriculture and health datasets, not this track |
+
+**Why Maps is not used.** Its two jobs are covered: CPCB via data.gov.in is the
+reference network a GRAP decision is statutorily taken on, which makes it a
+better receptor figure than the Air Quality API; and placing a report in a
+tehsil resolves correctly at the 0.1° grid scale from the corridor centroid
+table. It stays wired for a deployment with billing.
 
 **Why Vertex AI is not doing the prediction.** The forecast here is a physics
 model, not a learned one, and that is a deliberate choice rather than a gap: a
@@ -196,6 +232,7 @@ would be adding inputs to something not yet known to be right.
 src/lib/google/       Gemini, Translation, TTS, STT adapters + capability registry
 src/lib/sources/      FIRMS, Open-Meteo, CPCB, Air Quality, geocoding
 src/lib/attribution/  the puff model
+src/lib/pipeline/     one run: fetch → attribute → seal certificate → advisory input
 src/app/api/          observe · attribution · advisory · alert · sources · integration
 src/components/       illustration scenes, corridor map, register figures
 ```
