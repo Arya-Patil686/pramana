@@ -337,7 +337,7 @@ GRAP stage currently invoked: ${input.grapStage}
 Warning lead time before threshold crossing: ${input.leadTimeHours} h
 Transport delay, source ignition to receptor: ${input.transportHours} h
 
-Attributed to upwind cells outside the receptor jurisdiction: ${input.upwindSharePct.toFixed(1)}%${
+Share of the biomass-attributable load from upwind cells outside the receptor jurisdiction: ${input.upwindSharePct.toFixed(1)}% (this is a share of crop-fire smoke only — thermal satellites cannot see traffic, construction or industry, so it is NOT the share of everything the receptor is breathing, and must never be presented as one)${
                 input.confidenceInterval
                   ? ` (95% CI ${input.confidenceInterval[0].toFixed(1)}–${input.confidenceInterval[1].toFixed(1)}%)`
                   : ""
@@ -496,7 +496,7 @@ export async function draftAuthorityAlert(
 
 Receptor: ${input.receptorCity}
 Forecast peak AQI ${input.peakAQI} in ${input.peakWindow}
-Attributed upwind: ${input.upwindSharePct.toFixed(1)}%${
+Share of the biomass-attributable load from upwind: ${input.upwindSharePct.toFixed(1)}% (crop-fire smoke only; not the receptor's total load — say so wherever the figure appears)${
                 input.confidenceInterval
                   ? ` (95% CI ${input.confidenceInterval[0].toFixed(1)}–${input.confidenceInterval[1].toFixed(1)}%)`
                   : ""

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { draftAdvisory, translateWithGemini, type AdvisoryInput } from "@/lib/google/gemini";
+import { draftAdvisory, translateWithGemini } from "@/lib/google/gemini";
 import { translateTexts, synthesizeSpeech } from "@/lib/google/speech";
 import { languageFor, publicMessage, type SeverityBand } from "@/lib/google/languages";
-import { EPISODES } from "@/data/mock-episodes";
+import { runEpisode } from "@/lib/pipeline/episode";
 import { memo, contentKey } from "@/lib/google/cache";
 
 /*
@@ -24,7 +24,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface AdvisoryBody {
-  episodeId?: string;
+  /** "episode" replays the recorded 3 November field; "live" uses today's. */
+  mode?: string;
   language?: string;
   speak?: boolean;
 }
@@ -34,39 +35,16 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as AdvisoryBody;
   } catch {
-    /* An empty body is valid: default to the headline episode. */
+    /* An empty body is valid: default to the episode replay. */
   }
 
-  const episode =
-    EPISODES.find((e) => e.id === body.episodeId) ?? EPISODES[0];
   const language = typeof body.language === "string" ? body.language : "en";
   const lang = languageFor(language);
 
-  const upwind = episode.attribution.filter((a) => a.state !== "Delhi");
-  const upwindSharePct = upwind.reduce((sum, a) => sum + a.contribution, 0);
-
-  const input: AdvisoryInput = {
-    receptorCity: "Delhi",
-    peakAQI: episode.peakAQI,
-    peakWindow: "02:00–06:00 IST",
-    grapStage: episode.grapStage,
-    upwindSharePct,
-    confidenceInterval: [
-      upwind.reduce((sum, a) => sum + a.confidenceLow, 0),
-      Math.min(100, upwind.reduce((sum, a) => sum + a.confidenceHigh, 0)),
-    ],
-    topSources: [...upwind]
-      .sort((a, b) => b.contribution - a.contribution)
-      .slice(0, 3)
-      .map((a) => ({
-        name: a.tehsil,
-        state: a.state,
-        contributionPct: a.contribution,
-      })),
-    leadTimeHours: episode.leadTimeHours,
-    transportHours: 40,
-    certificateId: episode.certificateId,
-  };
+  /* Every figure below comes from one pipeline run — the same run that seals
+     the certificate — rather than from a hand-written episode record. */
+  const run = await runEpisode(body.mode === "live" ? "live" : "episode");
+  const input = run.advisoryInput;
 
   /*
      Cached per episode, not per request. The draft does not depend on the
@@ -75,7 +53,7 @@ export async function POST(request: Request) {
      clicks. A fallback is never cached: one rate-limited minute must not
      freeze recorded output into the page for the next ten.
   */
-  const draftKey = contentKey("advisory", episode.id, input.upwindSharePct, input.peakAQI);
+  const draftKey = contentKey("advisory", run.certificate.id, input.upwindSharePct, input.peakAQI);
   const { value: drafted, hit: draftHit } = await memo(
     draftKey,
     () => draftAdvisory(input),
@@ -140,7 +118,9 @@ export async function POST(request: Request) {
     : null;
 
   return NextResponse.json({
-    episodeId: episode.id,
+    episodeId: run.certificate.episodeId,
+    certificateId: run.certificate.id,
+    receptor: run.receptor,
     language,
     advisory: {
       ...advisory,
