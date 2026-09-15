@@ -33,6 +33,33 @@ import {
 /** Milliseconds to wait before the single rate-limit retry. */
 const RETRY_DELAY_MS = 1500;
 
+/*
+   The models a call may fall through to, preferred first. Overridable with a
+   comma-separated PRAMANA_GEMINI_FALLBACK_MODELS for a project with different
+   access.
+*/
+const FALLBACK_MODELS = (
+  process.env.PRAMANA_GEMINI_FALLBACK_MODELS ??
+  "gemini-3.6-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3.8-flash"
+)
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+function modelChain(preferred: string): string[] {
+  return [preferred, ...FALLBACK_MODELS.filter((m) => m !== preferred)];
+}
+
+/** Quota, overload or network: worth trying again, possibly on another model. */
+function isTransient(error: unknown): boolean {
+  const e = error as { message?: string; cause?: { code?: string; name?: string } };
+  const text = `${e?.message ?? String(error)} ${e?.cause?.code ?? ""} ${e?.cause?.name ?? ""}`;
+  return (
+    isRateLimited(error) ||
+    /503|UNAVAILABLE|high demand|overloaded|fetch failed|timeout|ECONNRESET|ETIMEDOUT/i.test(text)
+  );
+}
+
 function isRateLimited(error: unknown): boolean {
   const msg = error instanceof Error ? error.message : String(error);
   return msg.includes("429") || /RESOURCE_EXHAUSTED|exceeded your current quota/i.test(msg);
@@ -68,30 +95,46 @@ async function serve<T>(
     };
   }
 
-  try {
-    let data: T;
-    try {
-      data = await live(ai, spec.model);
-    } catch (first) {
-      /*
-         One retry, only for rate limiting.
+  /*
+     Model fallthrough.
 
-         The free tier's per-minute quota is small enough that a visitor
-         clicking through the language picker can exhaust it, and a burst
-         usually clears within a second or two. Retrying anything else would
-         just double the latency before failing — a bad key is still a bad key
-         on the second attempt.
-      */
-      if (!isRateLimited(first)) throw first;
-      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
-      data = await live(ai, spec.model);
+     The Gemini free tier meters generate requests per model, per day, and a
+     single model can also answer 503 "high demand" for long stretches. So a
+     call that is refused on quota or overload moves to the next model rather
+     than dropping straight to the recorded fixture. Whichever model actually
+     answers is recorded in `model`, so provenance — and anything sealed into
+     a certificate — names the model that produced the figure, not the one
+     that was asked first.
+
+     Anything that is not quota, overload or a network failure is not retried:
+     a bad key or a malformed request fails the same way on every model.
+  */
+  const models = modelChain(spec.model);
+  let lastError: unknown;
+  for (const model of models) {
+    try {
+      const data = await live(ai, model);
+      return { data, mode: "live", model, latencyMs: Date.now() - started };
+    } catch (err) {
+      lastError = err;
+      if (!isTransient(err)) break;
+      if (isRateLimited(err) && model === models[0]) {
+        /* A per-minute burst often clears in a second or two; give the
+           preferred model one short second chance before moving on. */
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        try {
+          const data = await live(ai, model);
+          return { data, mode: "live", model, latencyMs: Date.now() - started };
+        } catch (again) {
+          lastError = again;
+          if (!isTransient(again)) break;
+        }
+      }
     }
-    return {
-      data,
-      mode: "live",
-      model: spec.model,
-      latencyMs: Date.now() - started,
-    };
+  }
+
+  try {
+    throw lastError;
   } catch (error) {
     return {
       data: fixture,

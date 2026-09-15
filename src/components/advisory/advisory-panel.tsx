@@ -279,9 +279,8 @@ export function AdvisoryPanel() {
               {data.publicMessage.via === "generated" && (
                 <p className="mt-4 border-l-2 border-accent-signal pl-3 text-2xs leading-relaxed text-text-tertiary">
                   No reviewed copy exists in {spec.english} yet, so this is a
-                  machine translation of the reviewed English — produced once
-                  by {data.publicMessage.model ?? "Gemini"} at build time, not
-                  checked by a {spec.english} speaker. The four
+                  machine translation of the reviewed English, committed ahead
+                  of time and not yet checked by a {spec.english} speaker. The four
                   corridor languages carry reviewed copy; a state adopting this
                   would have its own health department sign off the rest before
                   any of it went out.
@@ -369,7 +368,7 @@ export function AdvisoryPanel() {
                   data.publicMessage.via === "reviewed"
                     ? "Reviewed phrasebook"
                     : data.publicMessage.via === "generated"
-                      ? `${data.publicMessage.model ?? "Gemini"} · built`
+                      ? "Machine translation · unreviewed"
                       : "English, not yet translated"
                 }
               />
