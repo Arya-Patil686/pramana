@@ -244,6 +244,12 @@ did not.
 
 ## Licence and attribution
 
-Built for Build with AI: Code for Communities. Data: NASA FIRMS (public
-domain), Open-Meteo (CC BY 4.0), CPCB via data.gov.in (Government Open Data
-Licence — India), Google Air Quality API (per Maps Platform terms).
+Built for Build with AI: Code for Communities. Extends the team's original
+prototype, [ananyac9820/pramana](https://github.com/ananyac9820/pramana).
+
+Data: NASA FIRMS (public domain), Open-Meteo (CC BY 4.0), CPCB via
+data.gov.in (Government Open Data Licence — India).
+
+Open-source components: Next.js, React (MIT), Tailwind CSS (MIT), three.js
+and React Three Fiber (MIT), Framer Motion (MIT), Lenis (MIT), and the
+Google Gen AI SDK (Apache-2.0).
