@@ -113,7 +113,7 @@ export default async function ConsolePage({
           <Upstream label="Fires" live={fires.live} detail={`${fires.detections.length} detections`} />
           <Upstream label="Wind" live={wind.live} detail={`${meanSpeed.toFixed(1)} m/s · 925 hPa`} />
           <Upstream label="CPCB" live={cpcb.live} detail={`${cpcb.stations.length} stations`} />
-          <Upstream label="Receptor" live={air.live} detail={receptorAqi ? `AQI ${receptorAqi}` : "—"} />
+          <Upstream label="Receptor" live={receptorStation ? cpcb.live : air.live} detail={receptorAqi ? `AQI ${receptorAqi}` : "—"} />
 
           <span className="ml-auto label-technical">
             Computed {new Date().toISOString().slice(11, 19)}Z

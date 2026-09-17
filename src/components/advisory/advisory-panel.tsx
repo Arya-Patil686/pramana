@@ -187,7 +187,7 @@ export function AdvisoryPanel() {
               )}
               title={
                 onCorridor
-                  ? `Spoken along the Punjab–Delhi corridor`
+                  ? `${l.english} — spoken along the Punjab–Delhi corridor`
                   : `${l.english} — outside this corridor, shown to demonstrate national reach`
               }
             >

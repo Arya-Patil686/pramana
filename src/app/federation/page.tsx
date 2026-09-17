@@ -186,6 +186,12 @@ export default function FederationPage() {
             architecture is arranged so that the question of trust never
             requires anyone to hand over their observations.
           </p>
+          <p className="mt-4 border border-[var(--color-ink-hair)] bg-bg-void px-3.5 py-2.5 text-sm leading-relaxed text-text-secondary">
+            <span className="label-technical mr-2">Illustrative</span>
+            This is the target architecture. The prototype runs as a single node;
+            the certificate format on /certificate is the part that already works
+            across jurisdictions.
+          </p>
         </header>
 
         <div className="mt-10">

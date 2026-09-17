@@ -111,6 +111,12 @@ export default function CounterfactualPage() {
             burning, for how long, to keep the receptor city out of a given
             GRAP stage.
           </p>
+          <p className="mt-4 border border-[var(--color-ink-hair)] bg-bg-void px-3.5 py-2.5 text-sm leading-relaxed text-text-secondary">
+            <span className="label-technical mr-2">Illustrative</span>
+            Runs on a sample episode record, not on the live register the
+            console computes. It shows the decision this output enables; wiring it
+            to the live engine is on the roadmap.
+          </p>
         </header>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-12">
