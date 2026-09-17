@@ -105,15 +105,15 @@ export const CAPABILITIES: CapabilitySpec[] = [
     model: GEMINI_REASONING_MODEL,
     role: "Turns a numeric attribution register into an advisory a district magistrate can act on, and drafts the authority alert.",
     envVar: "GEMINI_API_KEY",
-    surface: "/console, /alerts",
+    surface: "/advisory",
   },
   {
     id: "translation",
     product: "Cloud Translation API",
     model: "translate/v2",
-    role: "Renders every citizen-facing advisory into the languages actually spoken along the corridor.",
+    role: "Translates the operator advisory into the reader's language. Public-health instructions come from a reviewed phrasebook, never from a live translation.",
     envVar: "GOOGLE_TRANSLATE_API_KEY",
-    surface: "/report, /advisory",
+    surface: "/advisory",
   },
   {
     id: "text-to-speech",

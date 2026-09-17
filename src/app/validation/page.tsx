@@ -70,6 +70,12 @@ export default function ValidationPage() {
             persistence, seasonal climatology, and the Google Maps Platform Air
             Quality API 96-hour forecast.
           </p>
+          <p className="mt-4 border border-[var(--color-ink-hair)] bg-bg-void px-3.5 py-2.5 text-sm leading-relaxed text-text-secondary">
+            <span className="label-technical mr-2">Illustrative</span>
+            This page sets out the validation protocol. The scores shown are
+            placeholder figures that show how results will be reported; the
+            back-test has not been run yet. It is the first item on the roadmap.
+          </p>
         </header>
 
         {/* Benchmarks */}

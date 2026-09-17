@@ -85,7 +85,7 @@ export async function POST(request: Request) {
   let headlineLocalised = cloud.data.texts[0] ?? advisory.headline;
   let bodyLocalised = cloud.data.texts[1] ?? advisory.body;
   let narrativeVia: "cloud-translation" | "gemini" | "none" =
-    cloud.data.translated ? "cloud-translation" : "none";
+    language !== "en" && cloud.data.translated ? "cloud-translation" : "none";
   let translationError: string | null = null;
 
   const publicMsg = message;
