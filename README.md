@@ -8,6 +8,11 @@ an instrument that settles who owns it.
 
 > प्रमाण · *pramāṇa* · "proof, valid means of knowledge"
 
+**Live:** https://pramana-arya-patils-projects-37178a61.vercel.app
+
+`/integration` on the deployment reports which Google capabilities are keyed
+there and which are serving recorded output.
+
 ---
 
 ## Run it
